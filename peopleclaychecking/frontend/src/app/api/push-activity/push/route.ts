@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
     }
 
     return new Promise((resolve) => {
-      const pythonProcess = spawn('bash', ['-c', `source venv/bin/activate && python3 ${scriptPath} --${action.replace('_', '-')} --campaign-id ${campaignId}`], {
+      const pythonProcess = spawn('bash', ['-c', `source venv/bin/activate && python3 "${scriptPath}" --${action.replace('_', '-')} --campaign-id ${campaignId}`], {
         cwd: backendDir,
         stdio: ['pipe', 'pipe', 'pipe']
       });

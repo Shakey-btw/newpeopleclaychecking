@@ -26,7 +26,6 @@ interface ChangeLogEntry {
 export default function PushActivity() {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [changeLog, setChangeLog] = useState<ChangeLogEntry[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
   const [leadChanges, setLeadChanges] = useState<{
@@ -39,6 +38,11 @@ export default function PushActivity() {
   const [pushStatus, setPushStatus] = useState<{ [key: string]: any }>({});
   const [pushing, setPushing] = useState<{ [key: string]: boolean }>({});
   const [showConfirmModal, setShowConfirmModal] = useState<{ campaignId: string; action: 'push_all' | 'push_new'; companyCount: number } | null>(null);
+  const [showChangeLog, setShowChangeLog] = useState(false);
+  const [showCheckmark, setShowCheckmark] = useState(false);
+  const [viewMode, setViewMode] = useState<'open-to-push' | 'all-campaigns'>('open-to-push');
+  const [newlyDiscoveredCampaigns, setNewlyDiscoveredCampaigns] = useState<Set<string>>(new Set());
+  const [isInitialLoad, setIsInitialLoad] = useState(true);
 
   // Navigation items for this page
   const navItems = [
@@ -50,7 +54,7 @@ export default function PushActivity() {
 
   const fetchData = async () => {
     try {
-      setIsLoading(true);
+      setIsUpdating(true); // Use sync loading animation instead of separate loading
       
       // Fetch campaigns and change log in parallel
       const [campaignsResponse, changelogResponse] = await Promise.all([
@@ -62,7 +66,21 @@ export default function PushActivity() {
       const changelogData = await changelogResponse.json();
       
       if (campaignsData.success) {
-        setCampaigns(campaignsData.campaigns || []);
+        const newCampaigns = campaignsData.campaigns || [];
+        const currentCampaignIds = new Set(campaigns.map(c => c.id));
+        const newlyDiscovered = new Set<string>();
+        
+        // Only find newly discovered campaigns if we had previous campaigns to compare against
+        if (campaigns.length > 0) {
+          newCampaigns.forEach((campaign: Campaign) => {
+            if (!currentCampaignIds.has(campaign.id)) {
+              newlyDiscovered.add(campaign.id);
+            }
+          });
+        }
+        
+        setCampaigns(newCampaigns);
+        setNewlyDiscoveredCampaigns(newlyDiscovered);
         setLastUpdate(new Date().toISOString());
       } else {
         console.error('Failed to fetch campaigns:', campaignsData.error);
@@ -76,7 +94,8 @@ export default function PushActivity() {
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
-      setIsLoading(false);
+      setIsUpdating(false); // Use sync loading animation instead of separate loading
+      setIsInitialLoad(false); // Mark that initial load is complete
     }
   };
 
@@ -105,9 +124,21 @@ export default function PushActivity() {
           });
         }
         
-        // Refresh the data after update
-        await fetchData();
+        // Update campaigns and change log without clearing the view
+        await updateCampaignsData();
+        await fetchChangeLog();
         console.log('Update completed:', data.stats);
+        
+        // Clear newly discovered campaigns after sync
+        setNewlyDiscoveredCampaigns(new Set());
+        
+        // Show checkmark for 2 seconds (only if not initial load)
+        if (!isInitialLoad) {
+          setShowCheckmark(true);
+          setTimeout(() => {
+            setShowCheckmark(false);
+          }, 2000);
+        }
       } else {
         console.error('Failed to update campaigns:', data.error);
       }
@@ -115,6 +146,42 @@ export default function PushActivity() {
       console.error('Error updating campaigns:', error);
     } finally {
       setIsUpdating(false);
+    }
+  };
+
+  const updateCampaignsData = async () => {
+    try {
+      // Fetch only campaigns data without setting loading state
+      const campaignsResponse = await fetch('/api/push-activity');
+      const campaignsData = await campaignsResponse.json();
+      
+      if (campaignsData.success) {
+        const newCampaigns = campaignsData.campaigns || [];
+        const currentCampaignIds = new Set(campaigns.map(c => c.id));
+        const newlyDiscovered = new Set<string>();
+        
+        // Only find newly discovered campaigns if we had previous campaigns to compare against
+        if (campaigns.length > 0) {
+          newCampaigns.forEach((campaign: Campaign) => {
+            if (!currentCampaignIds.has(campaign.id)) {
+              newlyDiscovered.add(campaign.id);
+            }
+          });
+        }
+        
+        setCampaigns(newCampaigns);
+        setNewlyDiscoveredCampaigns(newlyDiscovered);
+        setLastUpdate(new Date().toISOString());
+      }
+      
+      // Update push status for all campaigns
+      if (campaignsData.success && campaignsData.campaigns) {
+        campaignsData.campaigns.forEach((campaign: Campaign) => {
+          fetchPushStatus(campaign.id);
+        });
+      }
+    } catch (error) {
+      console.error('Error updating campaigns data:', error);
     }
   };
 
@@ -256,6 +323,21 @@ export default function PushActivity() {
     return new Date(timestamp).toLocaleString();
   };
 
+  const getFilteredCampaigns = () => {
+    if (viewMode === 'all-campaigns') {
+      return campaigns;
+    }
+    
+    // Filter for "open-to-push" view
+    return campaigns.filter(campaign => {
+      const status = pushStatus[campaign.id];
+      if (!status) return false;
+      
+      // Show campaigns that have never been pushed OR have new companies
+      return !status.has_ever_been_pushed || status.has_new_companies;
+    });
+  };
+
   return (
     <main className="min-h-screen bg-white p-4 sm:p-6">
       {/* Top Left Navigation */}
@@ -263,37 +345,161 @@ export default function PushActivity() {
         <TopLeftNav items={navItems} />
       </div>
       
-      <div className="mx-auto max-w-4xl pt-16">
+       <div className="mx-auto" style={{ paddingTop: '16px', maxWidth: 'calc(896px - 200px)' }}>
         {/* Header */}
         <div className="mb-8">
-          <h1 className="text-2xl font-light text-black mb-2">PUSH ACTIVITY</h1>
           <div className="flex items-center justify-between">
-            <p className="text-xs text-gray-600">
-              {isLoading ? 'Loading...' : `${campaigns.length} campaigns with company data`}
-            </p>
-            <button
-              onClick={handleUpdate}
-              disabled={isUpdating || isLoading}
-              className={`px-4 py-2 text-xs font-light border border-black transition-colors ${
-                isUpdating || isLoading
-                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                  : 'bg-white text-black hover:bg-black hover:text-white'
-              }`}
-            >
-              {isUpdating ? 'UPDATING...' : 'UPDATE'}
-            </button>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => {
+                  setViewMode('open-to-push');
+                  setShowChangeLog(false);
+                }}
+                className={`text-xs font-light cursor-pointer ${
+                  viewMode === 'open-to-push' && !showChangeLog
+                    ? 'text-black'
+                    : 'text-gray-400 hover:text-gray-600'
+                }`}
+                style={{
+                  fontSize: '12px',
+                  lineHeight: '16px',
+                  letterSpacing: '0.03em'
+                }}
+              >
+                OPEN TO PUSH
+              </button>
+              <span className="text-xs text-gray-300">/</span>
+              <button
+                onClick={() => {
+                  setViewMode('all-campaigns');
+                  setShowChangeLog(false);
+                }}
+                className={`text-xs font-light cursor-pointer ${
+                  viewMode === 'all-campaigns' && !showChangeLog
+                    ? 'text-black'
+                    : 'text-gray-400 hover:text-gray-600'
+                }`}
+                style={{
+                  fontSize: '12px',
+                  lineHeight: '16px',
+                  letterSpacing: '0.03em'
+                }}
+              >
+                ALL CAMPAIGNS
+              </button>
+            </div>
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => setShowChangeLog(!showChangeLog)}
+                className={`text-xs font-light flex items-center cursor-pointer ${
+                  showChangeLog
+                    ? 'text-black'
+                    : 'text-gray-400 hover:text-gray-600'
+                }`}
+                style={{
+                  fontSize: '12px',
+                  lineHeight: '16px',
+                  letterSpacing: '0.03em'
+                }}
+              >
+                CHANGE LOG
+              </button>
+              <button
+                onClick={handleUpdate}
+                disabled={isUpdating}
+                className={`text-xs font-light ${
+                  isUpdating
+                    ? 'text-gray-400 cursor-not-allowed'
+                    : 'text-gray-400 cursor-pointer hover:text-gray-600'
+                }`}
+                style={{
+                  fontSize: '12px',
+                  lineHeight: '16px',
+                  letterSpacing: '0.03em'
+                }}
+              >
+              {isUpdating ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 border border-gray-400 border-t-black rounded-full animate-spin"></div>
+                  <span className="text-xs font-light text-gray-600 lowercase">syncing data</span>
+                </div>
+              ) : showCheckmark ? (
+                <div className="flex items-center gap-1.5">
+                  <div className="w-3 h-3 text-black">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <polyline points="20,6 9,17 4,12"></polyline>
+                    </svg>
+                  </div>
+                  <span className="text-xs font-light text-gray-600 lowercase">successful</span>
+                </div>
+              ) : (
+                'SYNC'
+              )}
+              </button>
+            </div>
           </div>
         </div>
 
-        {/* Campaigns List */}
-        <div className="mb-12">
-          {isLoading ? (
-            <div className="text-xs text-gray-500">Loading campaigns...</div>
-          ) : campaigns.length === 0 ? (
-            <div className="text-xs text-gray-500">No campaigns found</div>
-          ) : (
-            <div className="space-y-1">
-              {campaigns.map((campaign, index) => {
+        {/* Campaigns List or Change Log */}
+        <div className="mb-12 overflow-hidden" style={{ marginTop: '14px' }}>
+          <div className={`transition-all duration-300 ease-out ${
+            showChangeLog 
+              ? 'opacity-100 max-h-screen' 
+              : 'opacity-0 max-h-0 pointer-events-none'
+          }`}>
+            {/* Change Log */}
+            <div>
+              {changeLog.length === 0 ? (
+                <div className="text-xs text-gray-500">No changes recorded</div>
+              ) : (
+                <div className="space-y-2">
+                  {changeLog.map((entry, index) => (
+                    <div key={index} className="text-xs text-gray-600">
+                      <span className="font-light">
+                        {formatTimestamp(entry.change_timestamp)}
+                      </span>
+                      <span className="mx-2">•</span>
+                      <span className="font-light">
+                        {formatChangeType(entry.change_type)}
+                      </span>
+                      {entry.campaign_name && (
+                        <>
+                          <span className="mx-2">•</span>
+                          <span className="font-light">{entry.campaign_name}</span>
+                        </>
+                      )}
+                      {entry.details && (
+                        <>
+                          <span className="mx-2">•</span>
+                          <span className="font-light text-gray-500">{entry.details}</span>
+                        </>
+                      )}
+                      {!entry.details && entry.lead_email && (
+                        <>
+                          <span className="mx-2">•</span>
+                          <span className="font-light">{entry.lead_email}</span>
+                        </>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+          
+          <div className={`transition-all duration-300 ease-out ${
+            !showChangeLog 
+              ? 'opacity-100 max-h-screen' 
+              : 'opacity-0 max-h-0 pointer-events-none'
+          }`}>
+            {/* Campaigns List */}
+            {getFilteredCampaigns().length === 0 ? (
+              <div className="text-xs text-gray-500">
+                {viewMode === 'open-to-push' ? 'No campaigns ready to push' : 'No campaigns found'}
+              </div>
+            ) : (
+            <div className="space-y-1 transition-all duration-300 ease-out">
+              {getFilteredCampaigns().map((campaign, index) => {
                 const companyChange = leadChanges?.companyCountChanges?.[campaign.name] || 0;
                 const status = pushStatus[campaign.id];
                 const isPushing = pushing[campaign.id] || false;
@@ -303,47 +509,123 @@ export default function PushActivity() {
                 return (
                   <div
                     key={index}
-                    className="flex items-center justify-between text-xs font-light text-black py-1 border-b border-gray-100 last:border-b-0"
+                    className={`flex items-center justify-between text-xs font-light text-black ${
+                      index === 0 
+                        ? 'border-t border-b border-gray-100' 
+                        : 'border-b border-gray-100 last:border-b-0'
+                    }`}
+                    style={{
+                      paddingTop: '8px',
+                      paddingBottom: '8px',
+                      lineHeight: '16px'
+                    }}
                   >
-                    <span>{campaign.name}</span>
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-500">{campaign.unique_company_count}</span>
-                      {companyChange !== 0 && (
-                        <span className={`text-xs ${companyChange > 0 ? 'text-green-600' : 'text-red-600'}`}>
-                          {companyChange > 0 ? '+' : ''}{companyChange}
-                        </span>
-                      )}
+                      <span>
+                        {newlyDiscoveredCampaigns.has(campaign.id) && <span className="text-green-600">(new) </span>}
+                        {campaign.name}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        {viewMode === 'open-to-push' && showPushNew ? (
+                          // Show new companies count for PUSH NEW campaigns
+                          <span className="text-gray-500">
+                            {pushStatus[campaign.id]?.new_companies || 0} <span className="text-green-600">(new)</span>
+                          </span>
+                        ) : (
+                          // Show total companies count for PUSH ALL campaigns
+                          <>
+                            <span className="text-gray-500">{campaign.unique_company_count}</span>
+                            {companyChange !== 0 && (
+                              <span className={`text-xs ${companyChange > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                                {companyChange > 0 ? '+' : ''}{companyChange}
+                              </span>
+                            )}
+                          </>
+                        )}
                       
                       {/* Push Buttons */}
                       <div className="flex items-center gap-1 ml-2">
-                        <button
-                          onClick={() => handlePushAll(campaign.id)}
-                          disabled={isPushing}
-                          className={`px-2 py-1 text-xs font-light transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
-                            hasEverBeenPushed 
-                              ? 'border border-black bg-white text-black hover:bg-black hover:text-white'
-                              : 'bg-black text-white hover:bg-gray-800'
-                          }`}
-                        >
-                          {isPushing ? 'PUSHING...' : 'PUSH ALL'}
-                        </button>
-                        
-              {showPushNew && (
-                <button
-                  onClick={() => handlePushNew(campaign.id)}
-                  disabled={isPushing}
-                  className="px-2 py-1 text-xs font-light bg-black text-white hover:bg-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isPushing ? 'PUSHING...' : `PUSH NEW (${pushStatus[campaign.id]?.new_companies || 0})`}
-                </button>
-              )}
+                        {viewMode === 'all-campaigns' ? (
+                          // All campaigns view - only PUSH ALL button
+                          <button
+                            onClick={() => handlePushAll(campaign.id)}
+                            disabled={isPushing}
+                            className="w-4 h-4 border disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                            style={{
+                              width: '16px',
+                              height: '16px',
+                              borderColor: '#EEEFF1',
+                              backgroundColor: '#FBFBFB',
+                              borderRadius: '3px'
+                            }}
+                          >
+                            {isPushing ? (
+                              <div className="w-2 h-2 border border-gray-400 border-t-black rounded-full animate-spin"></div>
+                            ) : (
+                              <span className="material-symbols-outlined text-black" style={{ fontSize: '12px' }}>
+                                arrow_forward
+                              </span>
+                            )}
+                          </button>
+                        ) : (
+                          // Open to push view - PUSH NEW if available, otherwise PUSH ALL
+                          <>
+                            {showPushNew ? (
+                              <button
+                                onClick={() => handlePushNew(campaign.id)}
+                                disabled={isPushing}
+                                className="w-4 h-4 border disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                                style={{
+                                  width: '16px',
+                                  height: '16px',
+                                  borderColor: '#EEEFF1',
+                                  backgroundColor: '#FBFBFB',
+                                  borderRadius: '3px',
+                                  borderWidth: '1px',
+                                  borderStyle: 'solid'
+                                }}
+                              >
+                                {isPushing ? (
+                                  <div className="w-2 h-2 border border-gray-400 border-t-black rounded-full animate-spin"></div>
+                                ) : (
+                                  <span className="material-symbols-outlined" style={{ fontSize: '12px', color: '#000000' }}>
+                                    arrow_forward
+                                  </span>
+                                )}
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handlePushAll(campaign.id)}
+                                disabled={isPushing}
+                                className="w-4 h-4 border disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                                style={{
+                                  width: '16px',
+                                  height: '16px',
+                                  borderColor: '#EEEFF1',
+                                  backgroundColor: '#FBFBFB',
+                                  borderRadius: '3px',
+                                  borderWidth: '1px',
+                                  borderStyle: 'solid'
+                                }}
+                              >
+                                {isPushing ? (
+                                  <div className="w-2 h-2 border border-gray-400 border-t-black rounded-full animate-spin"></div>
+                                ) : (
+                                  <span className="material-symbols-outlined" style={{ fontSize: '12px', color: '#000000' }}>
+                                    arrow_forward
+                                  </span>
+                                )}
+                              </button>
+                            )}
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
                 );
               })}
             </div>
-          )}
+            )}
+          </div>
         </div>
 
         {/* Lead Changes */}
@@ -411,47 +693,6 @@ export default function PushActivity() {
           </div>
         )}
 
-        {/* Change Log */}
-        <div>
-          <h2 className="text-xs font-light text-black mb-4 uppercase tracking-wide">
-            CHANGE LOG
-          </h2>
-          {changeLog.length === 0 ? (
-            <div className="text-xs text-gray-500">No changes recorded</div>
-          ) : (
-            <div className="space-y-2">
-              {changeLog.map((entry, index) => (
-                <div key={index} className="text-xs text-gray-600">
-                  <span className="font-light">
-                    {formatTimestamp(entry.change_timestamp)}
-                  </span>
-                  <span className="mx-2">•</span>
-                  <span className="font-light">
-                    {formatChangeType(entry.change_type)}
-                  </span>
-                  {entry.campaign_name && (
-                    <>
-                      <span className="mx-2">•</span>
-                      <span className="font-light">{entry.campaign_name}</span>
-                    </>
-                  )}
-                  {entry.details && (
-                    <>
-                      <span className="mx-2">•</span>
-                      <span className="font-light text-gray-500">{entry.details}</span>
-                    </>
-                  )}
-                  {!entry.details && entry.lead_email && (
-                    <>
-                      <span className="mx-2">•</span>
-                      <span className="font-light">{entry.lead_email}</span>
-                    </>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
       </div>
 
       {/* Confirmation Modal */}
@@ -467,14 +708,14 @@ export default function PushActivity() {
             <div className="flex gap-2">
               <button
                 onClick={() => setShowConfirmModal(null)}
-                className="px-4 py-2 text-xs font-light border border-black bg-white text-black hover:bg-gray-50 transition-colors"
+                className="px-4 py-2 text-xs font-light border border-black bg-white text-black"
                 style={{ borderRadius: 0 }}
               >
                 CANCEL
               </button>
               <button
                 onClick={confirmPush}
-                className="px-4 py-2 text-xs font-light bg-black text-white hover:bg-gray-800 transition-colors"
+                className="px-4 py-2 text-xs font-light bg-black text-white"
                 style={{ borderRadius: 0 }}
               >
                 PUSH NOW

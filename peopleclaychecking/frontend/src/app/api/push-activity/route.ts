@@ -10,7 +10,7 @@ export async function GET() {
     
     return new Promise((resolve) => {
       // Execute the Python script to get current campaigns
-      const pythonProcess = spawn('bash', ['-c', `source venv/bin/activate && python3 ${scriptPath} --get-campaigns`], {
+      const pythonProcess = spawn('bash', ['-c', `source venv/bin/activate && python3 "${scriptPath}" --get-campaigns`], {
         cwd: backendDir,
         stdio: ['pipe', 'pipe', 'pipe']
       });
@@ -86,7 +86,7 @@ export async function POST(request: NextRequest) {
     
     return new Promise((resolve) => {
       // Execute the Python script to update campaigns
-      const pythonProcess = spawn('bash', ['-c', `source venv/bin/activate && python3 ${scriptPath} --update-campaigns`], {
+      const pythonProcess = spawn('bash', ['-c', `source venv/bin/activate && python3 "${scriptPath}" --update-campaigns`], {
         cwd: backendDir,
         stdio: ['pipe', 'pipe', 'pipe']
       });

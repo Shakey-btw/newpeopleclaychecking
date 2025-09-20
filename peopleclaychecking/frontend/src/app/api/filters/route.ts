@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     
     return new Promise((resolve) => {
       // Execute the Python script with the filter URL using the virtual environment
-      const pythonProcess = spawn('bash', ['-c', `source venv/bin/activate && python3 ${scriptPath} "${filterUrl}"`], {
+      const pythonProcess = spawn('bash', ['-c', `source venv/bin/activate && python3 "${scriptPath}" "${filterUrl}"`], {
         cwd: path.join(process.cwd(), "../backend"),
         stdio: ['pipe', 'pipe', 'pipe']
       });

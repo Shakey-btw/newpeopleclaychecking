@@ -25,17 +25,17 @@ export async function POST(request: NextRequest) {
         if (forceRefresh) {
           // Force refresh: run full data sync + matching
           command = 'bash';
-          args = ['-c', `source venv/bin/activate && python3 ${path.join(backendDir, 'main.py')} && python3 ${path.join(backendDir, 'matching.py')}`];
+          args = ['-c', `source venv/bin/activate && python3 "${path.join(backendDir, 'main.py')}" && python3 "${path.join(backendDir, 'matching.py')}"`];
         } else {
           // Check for cached results first - if they exist, return them; if not, run matching
           command = 'bash';
-          args = ['-c', `source venv/bin/activate && python3 ${path.join(backendDir, 'matching.py')}`];
+          args = ['-c', `source venv/bin/activate && python3 "${path.join(backendDir, 'matching.py')}"`];
         }
       } else {
         // Use the new caching system for specific filters - this will check for existing results first
         command = 'bash';
         const forceFlag = forceRefresh ? ' --force' : '';
-        args = ['-c', `source venv/bin/activate && python3 ${scriptPath} --match ${filterId}${forceFlag}`];
+        args = ['-c', `source venv/bin/activate && python3 "${scriptPath}" --match ${filterId}${forceFlag}`];
       }
 
       console.log(`Executing: ${command} ${args.join(' ')}`);
