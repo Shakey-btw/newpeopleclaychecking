@@ -1,0 +1,12 @@
+{
+  "timestamp": "2025-09-19T17:32:02.658Z",
+  "data": {
+    "test": "data from Make",
+    "campaign_id": "test123",
+    "companies": [
+      "Company A",
+      "Company B"
+    ]
+  },
+  "received_at": 1758303122658
+}
