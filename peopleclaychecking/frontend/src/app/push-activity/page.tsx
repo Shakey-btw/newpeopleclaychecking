@@ -44,6 +44,26 @@ export default function PushActivity() {
   const [newlyDiscoveredCampaigns, setNewlyDiscoveredCampaigns] = useState<Set<string>>(new Set());
   const [isInitialLoad, setIsInitialLoad] = useState(true);
 
+  // Save data to localStorage
+  const saveToCache = (data: any) => {
+    try {
+      localStorage.setItem('pushActivityData', JSON.stringify(data));
+      localStorage.setItem('pushActivityTimestamp', Date.now().toString());
+    } catch (error) {
+      console.error('Error saving to cache:', error);
+    }
+  };
+
+  // Clear cache
+  const clearCache = () => {
+    try {
+      localStorage.removeItem('pushActivityData');
+      localStorage.removeItem('pushActivityTimestamp');
+    } catch (error) {
+      console.error('Error clearing cache:', error);
+    }
+  };
+
   // Navigation items for this page
   const navItems = [
     { id: "network-commit", label: "NETWORK UPLOAD", href: "/network-commit" },
@@ -91,6 +111,18 @@ export default function PushActivity() {
       } else {
         console.error('Failed to fetch change log:', changelogData.error);
       }
+      
+      // Save to cache after successful fetch
+      if (campaignsData.success && changelogData.success) {
+        saveToCache({
+          campaigns: campaignsData.campaigns || [],
+          changeLog: changelogData.changeLog || [],
+          lastUpdate: new Date().toISOString(),
+          leadChanges: null,
+          pushStatus: {},
+          newlyDiscoveredCampaigns: Array.from(newlyDiscoveredCampaigns)
+        });
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -102,6 +134,9 @@ export default function PushActivity() {
   const handleUpdate = async () => {
     try {
       setIsUpdating(true);
+      // Clear cache when doing manual sync to ensure fresh data
+      clearCache();
+      
       const response = await fetch('/api/push-activity', {
         method: 'POST',
         headers: {
@@ -172,6 +207,16 @@ export default function PushActivity() {
         setCampaigns(newCampaigns);
         setNewlyDiscoveredCampaigns(newlyDiscovered);
         setLastUpdate(new Date().toISOString());
+        
+        // Save to cache after successful update
+        saveToCache({
+          campaigns: newCampaigns,
+          changeLog: changeLog,
+          lastUpdate: new Date().toISOString(),
+          leadChanges: leadChanges,
+          pushStatus: pushStatus,
+          newlyDiscoveredCampaigns: Array.from(newlyDiscovered)
+        });
       }
       
       // Update push status for all campaigns
@@ -282,7 +327,40 @@ export default function PushActivity() {
   };
 
   useEffect(() => {
-    fetchData();
+    // Try to load cached data first
+    const loadCachedData = () => {
+      try {
+        const cachedData = localStorage.getItem('pushActivityData');
+        const cachedTimestamp = localStorage.getItem('pushActivityTimestamp');
+        
+        if (cachedData && cachedTimestamp) {
+          const data = JSON.parse(cachedData);
+          const timestamp = parseInt(cachedTimestamp);
+          const now = Date.now();
+          const fiveMinutes = 5 * 60 * 1000;
+          
+          // If data is less than 5 minutes old, use cached data
+          if (now - timestamp < fiveMinutes) {
+            setCampaigns(data.campaigns || []);
+            setChangeLog(data.changeLog || []);
+            setLastUpdate(data.lastUpdate || null);
+            setLeadChanges(data.leadChanges || null);
+            setPushStatus(data.pushStatus || {});
+            setNewlyDiscoveredCampaigns(new Set(data.newlyDiscoveredCampaigns || []));
+            setIsInitialLoad(false);
+            return true; // Data loaded from cache
+          }
+        }
+      } catch (error) {
+        console.error('Error loading cached data:', error);
+      }
+      return false; // No valid cached data
+    };
+    
+    // If no cached data, fetch fresh data
+    if (!loadCachedData()) {
+      fetchData();
+    }
   }, []);
 
   // Fetch push status for all campaigns when campaigns change
