@@ -69,6 +69,14 @@ class FilteredMatchingOrchestrator:
             
             filtered_data = sync_result['filtered_pipedrive_data']
             
+            # Step 3.5: Sync filter conditions
+            logger.info(f"Syncing filter conditions for filter: {filter_id}")
+            try:
+                conditions_sync = self.orchestrator.sync_filter_conditions([filter_id])
+                logger.info(f"Filter conditions sync result: {conditions_sync}")
+            except Exception as e:
+                logger.warning(f"Failed to sync filter conditions: {e}")
+            
             # Step 4: Perform matching with filtered data
             logger.info(f"Starting matching with filter: {filter_id}")
             matching_result = self.matcher.perform_matching(filter_id)
@@ -141,6 +149,45 @@ class FilteredMatchingOrchestrator:
                         'organizations_count': organizations_count,
                         'status': 'retrieved_from_cache',
                         'message': 'Results retrieved from existing cache. Use force_refresh=True to recalculate.'
+                    }
+            
+            # If force_refresh=True, sync the filtered data first
+            if force_refresh:
+                logger.info(f"Force refresh requested for filter {filter_id}, syncing filtered data first...")
+                
+                # Get the filter URL from the database
+                try:
+                    filter_info = self.orchestrator.pipedrive_puller.database.get_user_filters()
+                    filter_data = next((f for f in filter_info if f['filter_id'] == filter_id), None)
+                    
+                    if not filter_data:
+                        return {
+                            'error': f'Filter {filter_id} not found in database',
+                            'filter_id': filter_id,
+                            'status': 'error'
+                        }
+                    
+                    filter_url = filter_data['filter_url']
+                    logger.info(f"Syncing filtered data for URL: {filter_url}")
+                    
+                    # Sync the filtered data
+                    sync_result = self.orchestrator.sync_filtered_data(filter_url, status_filter='running')
+                    
+                    if 'error' in sync_result:
+                        return {
+                            'error': f'Failed to sync filtered data: {sync_result["error"]}',
+                            'filter_id': filter_id,
+                            'status': 'error'
+                        }
+                    
+                    logger.info(f"Successfully synced filtered data for filter {filter_id}")
+                    
+                except Exception as e:
+                    logger.error(f"Failed to sync filtered data for filter {filter_id}: {e}")
+                    return {
+                        'error': f'Failed to sync filtered data: {e}',
+                        'filter_id': filter_id,
+                        'status': 'error'
                     }
             
             # Perform matching with existing filter

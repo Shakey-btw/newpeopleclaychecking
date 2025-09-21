@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
       let args: string[];
 
       if (filterId === null || filterId === undefined || filterId === '') {
-        // For "Original Data", check if we have cached results first
+        // For "ALL COMPANIES", check if we have cached results first
         if (forceRefresh) {
           // Force refresh: run full data sync + matching
           command = 'bash';

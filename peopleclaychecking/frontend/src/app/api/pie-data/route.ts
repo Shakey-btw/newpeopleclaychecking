@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
       let params: any[];
       
       if (filterId === null || filterId === 'null' || filterId === '') {
-        // Get results for "All Organizations" (filter_id is NULL or empty)
+        // Get results for "ALL COMPANIES" (filter_id is NULL or empty)
         query = `
           SELECT matching_companies, non_matching_pipedrive, filter_name, created_at
           FROM matching_summary 

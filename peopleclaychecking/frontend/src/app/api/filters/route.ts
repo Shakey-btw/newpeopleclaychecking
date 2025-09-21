@@ -33,11 +33,11 @@ export async function GET() {
           console.error("Error querying user_filters table:", err);
           resolve(NextResponse.json({ error: "Query failed" }, { status: 500 }));
         } else {
-          // Add "Original Data" option at the beginning
+          // Add "ALL COMPANIES" option at the beginning
           const filters = [
             {
               filter_id: null,
-              filter_name: "Original Data",
+              filter_name: "ALL COMPANIES",
               filter_url: null,
               organizations_count: null,
               created_at: null,

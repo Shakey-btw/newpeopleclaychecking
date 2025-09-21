@@ -402,7 +402,7 @@ export default function PushActivity() {
                   letterSpacing: '0.03em'
                 }}
               >
-                CHANGE LOG
+                HISTORY
               </button>
               <button
                 onClick={handleUpdate}
@@ -421,7 +421,7 @@ export default function PushActivity() {
               {isUpdating ? (
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 border border-gray-400 border-t-black rounded-full animate-spin"></div>
-                  <span className="text-xs font-light text-gray-600 lowercase">syncing data</span>
+                  <span className="text-xs font-light text-gray-600 uppercase">syncing data</span>
                 </div>
               ) : showCheckmark ? (
                 <div className="flex items-center gap-1.5">
@@ -430,7 +430,7 @@ export default function PushActivity() {
                       <polyline points="20,6 9,17 4,12"></polyline>
                     </svg>
                   </div>
-                  <span className="text-xs font-light text-gray-600 lowercase">successful</span>
+                  <span className="text-xs font-light text-gray-600 uppercase">successful</span>
                 </div>
               ) : (
                 'SYNC'
@@ -494,8 +494,10 @@ export default function PushActivity() {
           }`}>
             {/* Campaigns List */}
             {getFilteredCampaigns().length === 0 ? (
-              <div className="text-xs text-gray-500">
-                {viewMode === 'open-to-push' ? 'no open campaigns' : 'No campaigns found'}
+              <div className="border-t border-gray-200 py-2">
+                <div className="text-xs text-gray-500">
+                  {viewMode === 'open-to-push' ? 'no open campaigns' : 'No campaigns found'}
+                </div>
               </div>
             ) : (
             <div className="space-y-1 transition-all duration-300 ease-out">
@@ -549,7 +551,7 @@ export default function PushActivity() {
                           <button
                             onClick={() => handlePushAll(campaign.id)}
                             disabled={isPushing}
-                            className="w-4 h-4 border disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                            className="w-4 h-4 border disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center cursor-pointer"
                             style={{
                               width: '16px',
                               height: '16px',
@@ -573,7 +575,7 @@ export default function PushActivity() {
                               <button
                                 onClick={() => handlePushNew(campaign.id)}
                                 disabled={isPushing}
-                                className="w-4 h-4 border disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                                className="w-4 h-4 border disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center cursor-pointer"
                                 style={{
                                   width: '16px',
                                   height: '16px',
@@ -596,7 +598,7 @@ export default function PushActivity() {
                               <button
                                 onClick={() => handlePushAll(campaign.id)}
                                 disabled={isPushing}
-                                className="w-4 h-4 border disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                                className="w-4 h-4 border disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center cursor-pointer"
                                 style={{
                                   width: '16px',
                                   height: '16px',

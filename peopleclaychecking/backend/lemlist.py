@@ -240,10 +240,23 @@ class CampaignDatabase:
             
             # Create campaign table with dynamic columns
             columns = []
+            used_columns = set()
+            field_mapping = {}
+            
             for field in sorted(all_fields):
                 # Determine column type based on sample data
                 column_type = self._determine_column_type(field, leads)
                 safe_field = self._sanitize_column_name(field)
+                
+                # Handle duplicate column names by adding a counter
+                original_safe_field = safe_field
+                counter = 1
+                while safe_field.lower() in used_columns:
+                    safe_field = f"{original_safe_field}_{counter}"
+                    counter += 1
+                
+                used_columns.add(safe_field.lower())
+                field_mapping[field] = safe_field
                 columns.append(f'"{safe_field}" {column_type}')
             
             create_table_sql = f'''
@@ -344,8 +357,25 @@ class CampaignDatabase:
             for lead in leads:
                 all_fields.update(lead.keys())
             
-            # Prepare data for insertion
-            sanitized_fields = [self._sanitize_column_name(field) for field in sorted(all_fields)]
+            # Prepare data for insertion - handle duplicate column names
+            used_columns = set()
+            field_mapping = {}
+            sanitized_fields = []
+            
+            for field in sorted(all_fields):
+                safe_field = self._sanitize_column_name(field)
+                
+                # Handle duplicate column names by adding a counter
+                original_safe_field = safe_field
+                counter = 1
+                while safe_field.lower() in used_columns:
+                    safe_field = f"{original_safe_field}_{counter}"
+                    counter += 1
+                
+                used_columns.add(safe_field.lower())
+                field_mapping[field] = safe_field
+                sanitized_fields.append(safe_field)
+            
             placeholders = ', '.join(['?' for _ in sanitized_fields])
             field_names = ', '.join([f'"{field}"' for field in sanitized_fields])
             

@@ -47,7 +47,7 @@ export default function FilterSelector({ className = "", onFilterSelect, refresh
           }
         }
       } else if (selectedFilterId === null) {
-        // Auto-select "Original Data" (null filterId) for UI state only
+        // Auto-select "ALL COMPANIES" (null filterId) for UI state only
         setSelectedFilterId(null);
         if (onFilterSelect) {
           onFilterSelect(null);
@@ -116,9 +116,9 @@ export default function FilterSelector({ className = "", onFilterSelect, refresh
       if (response.ok && data.success) {
         // Log whether results came from cache or were freshly calculated
         if (data.fromCache) {
-          console.log(`Results retrieved from cache for filter: ${filterId || 'All Organizations'}`);
+          console.log(`Results retrieved from cache for filter: ${filterId || 'ALL COMPANIES'}`);
         } else {
-          console.log(`Results freshly calculated for filter: ${filterId || 'All Organizations'}`);
+          console.log(`Results freshly calculated for filter: ${filterId || 'ALL COMPANIES'}`);
         }
         
         // Call the optional callback with filterId
@@ -180,7 +180,7 @@ export default function FilterSelector({ className = "", onFilterSelect, refresh
       <button 
         onClick={() => setIsDropdownOpen(!isDropdownOpen)}
         className={`text-[12px] tracking-[0.03em] leading-[16px] uppercase font-light mb-4 text-right pr-4 transition-colors cursor-pointer ${
-          (isDropdownOpen || isFilterInputVisible) ? 'text-[#A9A9A9]' : 'text-black hover:opacity-70 transition-opacity'
+          (isDropdownOpen || isFilterInputVisible) ? 'text-black' : 'text-gray-400 hover:text-gray-600'
         }`}
       >
         Filter

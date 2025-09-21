@@ -8,6 +8,7 @@ import logging
 from typing import Dict, Any, Optional, List
 from lemlist import LemlistDataPuller
 from pipedrive import PipedriveDataPuller
+from filter_conditions import FilterConditionsManager
 
 # Configure logging
 logging.basicConfig(
@@ -26,6 +27,7 @@ class DataSyncOrchestrator:
     def __init__(self, lemlist_api_key: str, pipedrive_api_key: str = None):
         self.lemlist_puller = LemlistDataPuller(lemlist_api_key)
         self.pipedrive_puller = PipedriveDataPuller(pipedrive_api_key) if pipedrive_api_key else None
+        self.filter_conditions_manager = FilterConditionsManager(pipedrive_api_key) if pipedrive_api_key else None
         logger.info("Data sync orchestrator initialized")
     
     def sync_lemlist_data(self, status_filter: Optional[str] = None) -> Dict[str, Any]:
@@ -168,6 +170,61 @@ class DataSyncOrchestrator:
         except Exception as e:
             logger.error(f"Failed to delete user filter: {e}")
             raise
+    
+    def sync_filter_conditions(self, filter_ids: List[str] = None) -> Dict[str, Any]:
+        """Sync filter conditions for all or specific filters"""
+        try:
+            if not self.filter_conditions_manager:
+                logger.warning("Filter conditions manager not available")
+                return {'error': 'Filter conditions manager not available'}
+            
+            # If no specific filter IDs provided, get all user filters
+            if not filter_ids:
+                user_filters = self.get_user_filters()
+                filter_ids = [f['filter_id'] for f in user_filters if f['filter_id']]
+            
+            logger.info(f"Syncing filter conditions for {len(filter_ids)} filters")
+            
+            # Sync all filter conditions
+            synced_count = self.filter_conditions_manager.sync_all_filter_conditions(filter_ids)
+            
+            logger.info(f"Filter conditions sync completed: {synced_count}/{len(filter_ids)} filters synced")
+            
+            return {
+                'synced_count': synced_count,
+                'total_filters': len(filter_ids),
+                'status': 'completed'
+            }
+            
+        except Exception as e:
+            logger.error(f"Filter conditions sync failed: {e}")
+            raise
+    
+    def get_filter_conditions(self, filter_id: str) -> Optional[Dict[str, Any]]:
+        """Get filter conditions for a specific filter"""
+        try:
+            if not self.filter_conditions_manager:
+                logger.warning("Filter conditions manager not available")
+                return None
+            
+            return self.filter_conditions_manager.get_filter_conditions(filter_id)
+            
+        except Exception as e:
+            logger.error(f"Failed to get filter conditions: {e}")
+            return None
+    
+    def get_all_filter_conditions(self) -> List[Dict[str, Any]]:
+        """Get all stored filter conditions"""
+        try:
+            if not self.filter_conditions_manager:
+                logger.warning("Filter conditions manager not available")
+                return []
+            
+            return self.filter_conditions_manager.get_all_filter_conditions()
+            
+        except Exception as e:
+            logger.error(f"Failed to get all filter conditions: {e}")
+            return []
 
 def main():
     """Main function"""

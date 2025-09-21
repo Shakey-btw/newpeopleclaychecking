@@ -18,6 +18,8 @@ export default function ApproachPage() {
   const [refreshTrigger, setRefreshTrigger] = useState(0);
   const [newlyAddedFilterId, setNewlyAddedFilterId] = useState<string | null>(null);
   const [showFilterInput, setShowFilterInput] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
+  const [showSyncCheckmark, setShowSyncCheckmark] = useState(false);
   const previousPieDataRef = useRef<PieData | null>(null);
 
   // Helper function to format numbers with dots as thousands separators
@@ -45,11 +47,11 @@ export default function ApproachPage() {
       
       if (data.hasData) {
         setPieData({ running: data.running, notActive: data.notActive });
-        console.log(`Pie data updated for filter: ${data.filterName || 'All Organizations'} (${data.running} running, ${data.notActive} not active)`);
+        console.log(`Pie data updated for filter: ${data.filterName || 'ALL COMPANIES'} (${data.running} running, ${data.notActive} not active)`);
       } else {
         // No data available for this filter yet
         setPieData({ running: 0, notActive: 0 });
-        console.log(`No data available for filter: ${filterId || 'All Organizations'}`);
+        console.log(`No data available for filter: ${filterId || 'ALL COMPANIES'}`);
       }
     } catch (error) {
       console.error('Error fetching pie data:', error);
@@ -82,8 +84,102 @@ export default function ApproachPage() {
     setShowFilterInput(true);
   };
 
+  // Handle full data sync for all filters
+  const handleSync = async () => {
+    try {
+      setIsSyncing(true);
+      setShowSyncCheckmark(false);
+      
+      console.log('🔄 Starting full data sync...');
+      
+      // Step 1: Trigger full data refresh (Lemlist + Pipedrive)
+      const mainSyncResponse = await fetch('/api/matching', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ filterId: null, forceRefresh: true }),
+      });
+      
+      const mainSyncData = await mainSyncResponse.json();
+      
+      if (!mainSyncData.success) {
+        console.error('Main sync failed:', mainSyncData.error);
+        return;
+      }
+      
+      console.log('✅ Main data sync completed:', mainSyncData.message);
+      
+      // Step 2: Get all existing filters
+      const filtersResponse = await fetch('/api/filters');
+      const filtersData = await filtersResponse.json();
+      
+      if (!filtersData.filters) {
+        console.error('Failed to get filters:', filtersData.error);
+        return;
+      }
+      
+      const allFilters = filtersData.filters;
+      console.log(`📊 Found ${allFilters.length} filters to sync`);
+      
+      // Step 3: Run matching for each filter with forceRefresh: true
+      const syncPromises = allFilters.map(async (filter: any) => {
+        try {
+          console.log(`🔄 Syncing filter: ${filter.filter_name} (ID: ${filter.filter_id})`);
+          
+          const response = await fetch('/api/matching', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ 
+              filterId: filter.filter_id, 
+              forceRefresh: true 
+            }),
+          });
+          
+          const data = await response.json();
+          
+          if (data.success) {
+            console.log(`✅ Filter synced: ${filter.filter_name}`);
+            return { success: true, filter: filter.filter_name };
+          } else {
+            console.error(`❌ Filter sync failed: ${filter.filter_name}`, data.error);
+            return { success: false, filter: filter.filter_name, error: data.error };
+          }
+        } catch (error) {
+          console.error(`❌ Filter sync error: ${filter.filter_name}`, error);
+          return { success: false, filter: filter.filter_name, error: error };
+        }
+      });
+      
+      // Wait for all filter syncs to complete
+      const results = await Promise.all(syncPromises);
+      
+      // Count successful and failed syncs
+      const successful = results.filter(r => r.success).length;
+      const failed = results.filter(r => !r.success).length;
+      
+      console.log(`📊 Sync Summary: ${successful} successful, ${failed} failed`);
+      
+      // Refresh the current filter's data
+      await fetchPieData(selectedFilterId);
+      
+      // Show success checkmark
+      setShowSyncCheckmark(true);
+      setTimeout(() => {
+        setShowSyncCheckmark(false);
+      }, 2000);
+      
+    } catch (error) {
+      console.error('Error during sync:', error);
+    } finally {
+      setIsSyncing(false);
+    }
+  };
+
   useEffect(() => {
-    // Fetch data when component mounts (default to "All Organizations")
+    // Fetch data when component mounts (default to "ALL COMPANIES")
     fetchPieData(null);
   }, []);
 
@@ -296,8 +392,8 @@ export default function ApproachPage() {
         <TopLeftNav items={navItems} />
       </div>
       
-      {/* Top Right Filter Selector */}
-      <div className="absolute top-[40px] right-6">
+      {/* Top Right Filter Selector and Sync Button */}
+      <div className="absolute top-[40px] right-6 flex items-center gap-4">
         <FilterSelector 
           onFilterSelect={handleFilterSelect} 
           refreshTrigger={refreshTrigger}
@@ -305,6 +401,37 @@ export default function ApproachPage() {
           onShowFilterInput={handleShowFilterInput}
           isFilterInputVisible={showFilterInput}
         />
+        
+        {/* SYNC Button */}
+        <div className="relative">
+          <button
+            onClick={handleSync}
+            disabled={isSyncing}
+            className={`text-[12px] tracking-[0.03em] leading-[16px] uppercase font-light mb-4 text-right pr-4 transition-colors ${
+              isSyncing
+                ? 'text-gray-400 cursor-not-allowed'
+                : 'text-gray-400 cursor-pointer hover:text-gray-600'
+            }`}
+          >
+            {isSyncing ? (
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 border border-gray-400 border-t-black rounded-full animate-spin"></div>
+                <span className="text-[12px] tracking-[0.03em] leading-[16px] uppercase font-light text-gray-600">syncing all</span>
+              </div>
+            ) : showSyncCheckmark ? (
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 text-black">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="20,6 9,17 4,12"></polyline>
+                  </svg>
+                </div>
+                <span className="text-[12px] tracking-[0.03em] leading-[16px] uppercase font-light text-gray-600">successful</span>
+              </div>
+            ) : (
+              'SYNC'
+            )}
+          </button>
+        </div>
       </div>
       
       {/* Filter Input - positioned below FilterSelector when showFilterInput is true */}
