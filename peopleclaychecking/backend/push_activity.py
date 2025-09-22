@@ -519,6 +519,11 @@ class PushActivityClient:
                 unique_companies = set()
                 
                 for lead in leads:
+                    # Skip PAUSED leads before processing company data
+                    if (lead.get('state_system') == 'paused' or 
+                        lead.get('state') == 'paused'):
+                        continue
+                    
                     if 'companyName' in lead and lead['companyName']:
                         has_company_column = True
                         company_name = lead['companyName'].strip()
@@ -909,6 +914,7 @@ def main():
     
     parser = argparse.ArgumentParser(description='Push Activity Management')
     parser.add_argument('--get-campaigns', action='store_true', help='Get campaigns with company data')
+    parser.add_argument('--get-overview', action='store_true', help='Get overview data with company and lead counts')
     parser.add_argument('--update-campaigns', action='store_true', help='Update campaigns')
     parser.add_argument('--get-changelog', action='store_true', help='Get change log')
     parser.add_argument('--limit', type=int, default=20, help='Limit for change log')
@@ -928,18 +934,88 @@ def main():
         database = PushActivityDatabase()
         
         if args.get_campaigns:
-            # Get campaigns with company data
+            # Get campaigns with company data (using database-filtered numbers)
             campaigns = client.get_campaigns_with_company_data()
-            result = {
-                "campaigns": [
-                    {
-                        "id": campaign['_id'],
-                        "name": campaign['name'],
+            result_campaigns = []
+            
+            for campaign in campaigns:
+                campaign_id = campaign['_id']
+                campaign_name = campaign['name']
+                
+                # Get unique companies count from database (excluding PAUSED leads)
+                conn = sqlite3.connect(database.db_path)
+                cursor = conn.cursor()
+                cursor.execute('''
+                    SELECT COUNT(DISTINCT company_name) FROM leads 
+                    WHERE campaign_id = ? AND is_active = 1 
+                    AND (state_system != 'paused' OR state_system IS NULL)
+                    AND (state != 'paused' OR state IS NULL)
+                    AND company_name IS NOT NULL AND company_name != ''
+                ''', (campaign_id,))
+                unique_companies_db = cursor.fetchone()[0]
+                conn.close()
+                
+                # Only include campaigns that have company data
+                if unique_companies_db > 0:
+                    result_campaigns.append({
+                        "id": campaign_id,
+                        "name": campaign_name,
                         "status": "running",
-                        "unique_company_count": campaign['unique_company_count']
-                    }
-                    for campaign in campaigns
-                ],
+                        "unique_company_count": unique_companies_db
+                    })
+            
+            result = {
+                "campaigns": result_campaigns,
+                "lastUpdate": datetime.now().isoformat()
+            }
+            print(json.dumps(result))
+            return 0
+            
+        elif args.get_overview:
+            # Get overview data with company and lead counts (excluding PAUSED leads)
+            campaigns = client.get_campaigns_with_company_data()
+            overview_campaigns = []
+            
+            for campaign in campaigns:
+                campaign_id = campaign['_id']
+                campaign_name = campaign['name']
+                
+                # Get total leads count from database (excluding PAUSED leads)
+                conn = sqlite3.connect(database.db_path)
+                cursor = conn.cursor()
+                cursor.execute('''
+                    SELECT COUNT(*) FROM leads 
+                    WHERE campaign_id = ? AND is_active = 1 
+                    AND (state_system != 'paused' OR state_system IS NULL)
+                    AND (state != 'paused' OR state IS NULL)
+                ''', (campaign_id,))
+                total_leads = cursor.fetchone()[0]
+                
+                # Get unique companies count from database (excluding PAUSED leads)
+                cursor.execute('''
+                    SELECT COUNT(DISTINCT company_name) FROM leads 
+                    WHERE campaign_id = ? AND is_active = 1 
+                    AND (state_system != 'paused' OR state_system IS NULL)
+                    AND (state != 'paused' OR state IS NULL)
+                    AND company_name IS NOT NULL AND company_name != ''
+                ''', (campaign_id,))
+                unique_companies = cursor.fetchone()[0]
+                conn.close()
+                
+                # Calculate ratio (people per company) - whole numbers only
+                ratio = round(total_leads / unique_companies) if unique_companies > 0 else 0
+                
+                overview_campaigns.append({
+                    "id": campaign_id,
+                    "name": campaign_name,
+                    "status": "running",
+                    "unique_companies": unique_companies,
+                    "total_leads": total_leads,
+                    "ratio": ratio
+                })
+            
+            result = {
+                "campaigns": overview_campaigns,
                 "lastUpdate": datetime.now().isoformat()
             }
             print(json.dumps(result))
