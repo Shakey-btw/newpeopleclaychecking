@@ -76,8 +76,71 @@ export async function POST(request: NextRequest) {
     const body = await request.json();
     const { action } = body;
 
+    if (action === 'get-companies') {
+      // Get all unique company names from running campaigns
+      const scriptPath = path.join(process.cwd(), "../backend/push_activity.py");
+      const backendDir = path.join(process.cwd(), "../backend");
+      
+      return new Promise((resolve) => {
+        // Execute the Python script to get company names
+        const pythonProcess = spawn('bash', ['-c', `source venv/bin/activate && python3 "${scriptPath}" --get-companies`], {
+          cwd: backendDir,
+          stdio: ['pipe', 'pipe', 'pipe']
+        });
+
+        let stdout = '';
+        let stderr = '';
+
+        pythonProcess.stdout.on('data', (data) => {
+          stdout += data.toString();
+        });
+
+        pythonProcess.stderr.on('data', (data) => {
+          stderr += data.toString();
+        });
+
+        pythonProcess.on('close', (code) => {
+          if (code === 0) {
+            console.log('Company names retrieved successfully');
+            
+            try {
+              // Parse JSON output from the backend
+              const result = JSON.parse(stdout);
+              resolve(NextResponse.json({ 
+                success: true, 
+                companies: result.companies || []
+              }));
+            } catch (parseError) {
+              console.error("Failed to parse Python script output:", parseError);
+              resolve(NextResponse.json({ 
+                success: false, 
+                error: "Failed to parse script output", 
+                details: stdout 
+              }, { status: 500 }));
+            }
+          } else {
+            console.error('Company names retrieval failed with code:', code);
+            console.error('Error output:', stderr);
+            resolve(NextResponse.json({ 
+              error: "Failed to retrieve company names", 
+              details: stderr,
+              code: code
+            }, { status: 500 }));
+          }
+        });
+
+        pythonProcess.on('error', (error) => {
+          console.error('Failed to start Python process:', error);
+          resolve(NextResponse.json({ 
+            error: "Failed to execute company names script", 
+            details: error.message
+          }, { status: 500 }));
+        });
+      });
+    }
+
     if (action !== 'sync') {
-      return NextResponse.json({ error: "Invalid action. Use 'sync'" }, { status: 400 });
+      return NextResponse.json({ error: "Invalid action. Use 'sync' or 'get-companies'" }, { status: 400 });
     }
 
     // Path to the push_activity.py script

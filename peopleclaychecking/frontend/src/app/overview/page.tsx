@@ -17,6 +17,8 @@ export default function Overview() {
   const [isSyncing, setIsSyncing] = useState(false);
   const [lastUpdate, setLastUpdate] = useState<string | null>(null);
   const [showCheckmark, setShowCheckmark] = useState(false);
+  const [isCopyingCompanies, setIsCopyingCompanies] = useState(false);
+  const [showCopySuccess, setShowCopySuccess] = useState(false);
 
   // Navigation items for this page
   const navItems = [
@@ -75,6 +77,41 @@ export default function Overview() {
     }
   };
 
+  const handleCopyCompanies = async () => {
+    try {
+      setIsCopyingCompanies(true);
+      const response = await fetch('/api/overview', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action: 'get-companies' }),
+      });
+      
+      const data = await response.json();
+      
+      if (data.success && data.companies) {
+        // Copy companies to clipboard, one per line
+        const companiesText = data.companies.join('\n');
+        await navigator.clipboard.writeText(companiesText);
+        
+        // Show success message for 2 seconds
+        setShowCopySuccess(true);
+        setTimeout(() => {
+          setShowCopySuccess(false);
+        }, 2000);
+        
+        console.log(`Copied ${data.companies.length} companies to clipboard`);
+      } else {
+        console.error('Failed to get companies:', data.error);
+      }
+    } catch (error) {
+      console.error('Error copying companies:', error);
+    } finally {
+      setIsCopyingCompanies(false);
+    }
+  };
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -108,12 +145,39 @@ export default function Overview() {
         <TopLeftNav items={navItems} />
       </div>
       
-      {/* Top Right Sync Button */}
-      <div className="absolute top-[40px] right-6">
+      {/* Top Right Buttons */}
+      <div className="absolute top-[40px] right-6 flex items-center gap-4">
+        {/* Copy Companies Button */}
+        <button
+          onClick={handleCopyCompanies}
+          disabled={isCopyingCompanies}
+          className={`text-[12px] tracking-[0.03em] leading-[16px] uppercase font-light text-right pr-4 transition-colors ${
+            isCopyingCompanies
+              ? 'text-gray-600 cursor-not-allowed'
+              : showCopySuccess
+              ? 'text-gray-600'
+              : 'text-gray-400 cursor-pointer hover:text-gray-600'
+          }`}
+        >
+          {showCopySuccess ? (
+            <div className="flex items-center gap-1.5">
+              <div className="w-3 h-3 text-black">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="20,6 9,17 4,12"></polyline>
+                </svg>
+              </div>
+              <span className="text-[12px] tracking-[0.03em] leading-[16px] uppercase font-light text-gray-600">copied</span>
+            </div>
+          ) : (
+            'COPY COMPANIES'
+          )}
+        </button>
+
+        {/* Sync Button */}
         <button
           onClick={handleSync}
           disabled={isSyncing}
-          className={`text-[12px] tracking-[0.03em] leading-[16px] uppercase font-light mb-4 text-right pr-4 transition-colors ${
+          className={`text-[12px] tracking-[0.03em] leading-[16px] uppercase font-light text-right pr-4 transition-colors ${
             isSyncing
               ? 'text-gray-400 cursor-not-allowed'
               : 'text-gray-400 cursor-pointer hover:text-gray-600'

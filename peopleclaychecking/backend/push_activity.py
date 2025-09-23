@@ -915,6 +915,7 @@ def main():
     parser = argparse.ArgumentParser(description='Push Activity Management')
     parser.add_argument('--get-campaigns', action='store_true', help='Get campaigns with company data')
     parser.add_argument('--get-overview', action='store_true', help='Get overview data with company and lead counts')
+    parser.add_argument('--get-companies', action='store_true', help='Get all unique company names from running campaigns')
     parser.add_argument('--update-campaigns', action='store_true', help='Update campaigns')
     parser.add_argument('--get-changelog', action='store_true', help='Get change log')
     parser.add_argument('--limit', type=int, default=20, help='Limit for change log')
@@ -1016,6 +1017,32 @@ def main():
             
             result = {
                 "campaigns": overview_campaigns,
+                "lastUpdate": datetime.now().isoformat()
+            }
+            print(json.dumps(result))
+            return 0
+            
+        elif args.get_companies:
+            # Get all unique company names from database directly (no API calls)
+            conn = sqlite3.connect(database.db_path)
+            cursor = conn.cursor()
+            
+            # Get all unique company names from all active campaigns in one query
+            cursor.execute('''
+                SELECT DISTINCT company_name FROM leads 
+                WHERE is_active = 1 
+                AND (state_system != 'paused' OR state_system IS NULL)
+                AND (state != 'paused' OR state IS NULL)
+                AND company_name IS NOT NULL AND company_name != ''
+                ORDER BY company_name
+            ''')
+            
+            companies_list = [row[0] for row in cursor.fetchall()]
+            conn.close()
+            
+            result = {
+                "companies": companies_list,
+                "count": len(companies_list),
                 "lastUpdate": datetime.now().isoformat()
             }
             print(json.dumps(result))
