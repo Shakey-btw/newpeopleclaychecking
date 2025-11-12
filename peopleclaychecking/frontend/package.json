@@ -10,7 +10,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "postinstall": "node -e \"try { require('lightningcss-linux-x64-gnu'); } catch(e) { console.log('lightningcss native binary check'); }\"",
+    "postinstall": "node -e \"const fs = require('fs'); const path = require('path'); try { const lcPath = require.resolve('lightningcss-linux-x64-gnu'); console.log('lightningcss binary found at:', lcPath); } catch(e) { console.log('Note: lightningcss binary check'); }\"",
     "test-lemlist": "tsx src/scripts/test-lemlist.ts",
     "test-lead-states": "tsx src/scripts/test-lead-states.ts",
     "test-essential": "tsx src/scripts/test-essential.ts",
