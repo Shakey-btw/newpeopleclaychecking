@@ -10,6 +10,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "postinstall": "npm rebuild lightningcss --optional || true",
     "test-lemlist": "tsx src/scripts/test-lemlist.ts",
     "test-lead-states": "tsx src/scripts/test-lead-states.ts",
     "test-essential": "tsx src/scripts/test-essential.ts",
@@ -42,8 +43,13 @@
     "@types/sqlite3": "^3.1.11",
     "eslint": "^9",
     "eslint-config-next": "15.5.2",
+    "lightningcss": "^1.28.1",
     "tailwindcss": "^4",
     "tsx": "^4.20.5",
     "typescript": "^5"
+  },
+  "optionalDependencies": {
+    "lightningcss-linux-x64-gnu": "^1.28.1",
+    "lightningcss-linux-x64-musl": "^1.28.1"
   }
 }
