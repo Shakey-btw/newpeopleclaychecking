@@ -2,15 +2,7 @@
 
 import { useState, useEffect } from "react";
 import TopLeftNav from "@/components/navigation/TopLeftNav";
-
-interface OverviewCampaign {
-  id: string;
-  name: string;
-  status: string;
-  unique_companies: number;
-  total_leads: number;
-  ratio: number;
-}
+import type { OverviewCampaign } from "@/lib/supabase-helpers";
 
 export default function Overview() {
   const [campaigns, setCampaigns] = useState<OverviewCampaign[]>([]);
@@ -24,12 +16,27 @@ export default function Overview() {
   const navItems = [
     { id: "network-commit", label: "NETWORK UPLOAD", href: "/network-commit" },
     { id: "company-checking", label: "PEOPLE CHECKING", href: "/company-checking" },
+    { id: "overview", label: "ANALYTICS", href: "/overview" },
     { id: "push-activity", label: "PUSH ACTIVITY", href: "/push-activity" },
-    { id: "approach", label: "APPROACH", href: "/approach" },
   ];
 
   const fetchData = async () => {
     try {
+      // Try Supabase first, fall back to API if it fails or has no data
+      try {
+        const { getOverviewData } = await import("@/lib/supabase-helpers");
+        const data = await getOverviewData();
+        
+        if (data.campaigns && data.campaigns.length > 0) {
+          setCampaigns(data.campaigns);
+          setLastUpdate(data.lastUpdate);
+          return; // Successfully loaded from Supabase
+        }
+      } catch (supabaseError) {
+        console.log('Supabase fetch failed, using API:', supabaseError);
+      }
+      
+      // Fall back to API route
       const response = await fetch('/api/overview');
       const data = await response.json();
       
@@ -80,6 +87,8 @@ export default function Overview() {
   const handleCopyCompanies = async () => {
     try {
       setIsCopyingCompanies(true);
+      
+      // Use API route (which has the data)
       const response = await fetch('/api/overview', {
         method: 'POST',
         headers: {
@@ -91,11 +100,9 @@ export default function Overview() {
       const data = await response.json();
       
       if (data.success && data.companies) {
-        // Copy companies to clipboard, one per line
         const companiesText = data.companies.join('\n');
         await navigator.clipboard.writeText(companiesText);
         
-        // Show success message for 2 seconds
         setShowCopySuccess(true);
         setTimeout(() => {
           setShowCopySuccess(false);
@@ -114,6 +121,7 @@ export default function Overview() {
 
   useEffect(() => {
     fetchData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const formatRatio = (ratio: number) => {

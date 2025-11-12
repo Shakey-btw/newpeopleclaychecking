@@ -12,6 +12,16 @@ from typing import Dict, List, Any, Optional
 from datetime import datetime
 import sqlite3
 import re
+import os
+
+# Try to import Supabase client
+try:
+    from supabase_client import get_supabase_client
+    SUPABASE_AVAILABLE = True
+except ImportError:
+    SUPABASE_AVAILABLE = False
+    logger = logging.getLogger(__name__)
+    logger.warning("Supabase client not available. Install supabase package to enable Supabase support.")
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -201,9 +211,20 @@ class PipedriveClient:
 class PipedriveDatabase:
     """Handles SQLite database operations for Pipedrive data"""
     
-    def __init__(self, db_path: str = "pipedrive.db"):
+    def __init__(self, db_path: str = "pipedrive.db", use_supabase: bool = True):
         self.db_path = db_path
+        self.use_supabase = use_supabase and SUPABASE_AVAILABLE
         self._init_database()
+        
+        # Initialize Supabase client if available
+        self.supabase_client = None
+        if self.use_supabase:
+            try:
+                self.supabase_client = get_supabase_client()
+                logger.info("Supabase client initialized for Pipedrive")
+            except Exception as e:
+                logger.warning(f"Failed to initialize Supabase client: {e}. Continuing with SQLite only.")
+                self.use_supabase = False
     
     def _init_database(self):
         """Initialize the database with organizations table"""
@@ -360,6 +381,9 @@ class PipedriveDatabase:
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
+            # Batch organizations for Supabase
+            supabase_orgs = []
+            
             for org in organizations:
                 # Skip if org is not a dictionary
                 if not isinstance(org, dict):
@@ -468,9 +492,80 @@ class PipedriveDatabase:
                             ''', (org.get('id'), key, str(value)))
                         except Exception as e:
                             logger.warning(f"Failed to save custom field {key} for org {org.get('id')}: {e}")
+                
+                # Prepare for Supabase
+                if self.use_supabase:
+                    supabase_orgs.append(basic_fields)
             
             conn.commit()
             conn.close()
+            
+            # Write to Supabase in batches
+            if self.use_supabase and supabase_orgs:
+                try:
+                    supabase = self.supabase_client.get_client()
+                    
+                    # Integer fields that need type conversion
+                    integer_fields = [
+                        'id', 'open_deals_count', 'related_open_deals_count', 'closed_deals_count',
+                        'related_closed_deals_count', 'participant_open_deals_count', 'participant_closed_deals_count',
+                        'email_messages_count', 'activities_count', 'done_activities_count', 'undone_activities_count',
+                        'files_count', 'notes_count', 'followers_count', 'won_deals_count', 'related_won_deals_count',
+                        'related_lost_deals_count', 'next_activity_id', 'last_activity_id', 'label'
+                    ]
+                    
+                    # Date fields
+                    date_fields = ['next_activity_date', 'last_activity_date']
+                    timestamp_fields = ['last_incoming_mail_time', 'last_outgoing_mail_time', 'update_time', 'add_time']
+                    
+                    # Process and convert types
+                    processed_orgs = []
+                    for org in supabase_orgs:
+                        processed_org = {}
+                        for key, value in org.items():
+                            if value is None:
+                                processed_org[key] = None
+                            elif key in integer_fields:
+                                try:
+                                    if isinstance(value, str) and ('T' in value or '-' in value[:10]):
+                                        processed_org[key] = None
+                                    else:
+                                        processed_org[key] = int(value) if value else None
+                                except (ValueError, TypeError):
+                                    processed_org[key] = None
+                            elif key in date_fields:
+                                if isinstance(value, str):
+                                    if 'T' in value:
+                                        processed_org[key] = value.split('T')[0]
+                                    elif len(value) >= 10:
+                                        processed_org[key] = value[:10]
+                                    else:
+                                        processed_org[key] = value
+                                else:
+                                    processed_org[key] = value
+                            elif key in timestamp_fields:
+                                if isinstance(value, str):
+                                    if 'T' in value:
+                                        processed_org[key] = value
+                                    elif len(value) == 10:
+                                        processed_org[key] = f"{value}T00:00:00Z"
+                                    else:
+                                        processed_org[key] = value
+                                else:
+                                    processed_org[key] = value
+                            else:
+                                processed_org[key] = value
+                        processed_orgs.append(processed_org)
+                    
+                    # Batch insert to Supabase
+                    batch_size = 100
+                    for i in range(0, len(processed_orgs), batch_size):
+                        batch = processed_orgs[i:i + batch_size]
+                        supabase.table("organizations").upsert(batch).execute()
+                    
+                    logger.info(f"Saved {len(organizations)} organizations to Supabase")
+                except Exception as e:
+                    logger.warning(f"Failed to write organizations to Supabase: {e}")
             
             logger.info(f"Saved {len(organizations)} organizations to database")
             
@@ -500,6 +595,9 @@ class PipedriveDatabase:
                         filter_conditions: str = None, organizations_count: int = 0):
         """Save or update a user filter"""
         try:
+            now = datetime.now().isoformat()
+            
+            # Save to SQLite
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
@@ -507,10 +605,26 @@ class PipedriveDatabase:
                 INSERT OR REPLACE INTO user_filters 
                 (filter_id, filter_name, filter_url, filter_conditions, organizations_count, last_used)
                 VALUES (?, ?, ?, ?, ?, ?)
-            ''', (filter_id, filter_name, filter_url, filter_conditions, organizations_count, datetime.now().isoformat()))
+            ''', (filter_id, filter_name, filter_url, filter_conditions, organizations_count, now))
             
             conn.commit()
             conn.close()
+            
+            # Save to Supabase
+            if self.use_supabase:
+                try:
+                    supabase = self.supabase_client.get_client()
+                    supabase.table("user_filters").upsert({
+                        "filter_id": filter_id,
+                        "filter_name": filter_name,
+                        "filter_url": filter_url,
+                        "filter_conditions": filter_conditions,
+                        "organizations_count": organizations_count,
+                        "last_used": now,
+                        "is_active": True
+                    }, on_conflict="filter_id").execute()
+                except Exception as e:
+                    logger.warning(f"Failed to write user filter to Supabase: {e}")
             
             logger.info(f"Saved user filter: {filter_name} (ID: {filter_id})")
             
@@ -557,6 +671,9 @@ class PipedriveDatabase:
     def save_filtered_organizations(self, filter_id: str, organizations: List[Dict[str, Any]]):
         """Save filtered organizations for a specific filter"""
         try:
+            now = datetime.now().isoformat()
+            
+            # Save to SQLite
             conn = sqlite3.connect(self.db_path)
             cursor = conn.cursor()
             
@@ -575,10 +692,39 @@ class PipedriveDatabase:
                 UPDATE user_filters 
                 SET organizations_count = ?, last_used = ?
                 WHERE filter_id = ?
-            ''', (len(organizations), datetime.now().isoformat(), filter_id))
+            ''', (len(organizations), now, filter_id))
             
             conn.commit()
             conn.close()
+            
+            # Save to Supabase
+            if self.use_supabase:
+                try:
+                    supabase = self.supabase_client.get_client()
+                    
+                    # Clear existing filtered organizations in Supabase
+                    supabase.table("filtered_organizations").delete().eq("filter_id", filter_id).execute()
+                    
+                    # Batch insert filtered organizations
+                    if organizations:
+                        filtered_orgs_data = [
+                            {
+                                "filter_id": filter_id,
+                                "org_id": org.get('id'),
+                                "org_name": org.get('name')
+                            }
+                            for org in organizations
+                        ]
+                        supabase.table("filtered_organizations").insert(filtered_orgs_data).execute()
+                    
+                    # Update user filter count
+                    supabase.table("user_filters").update({
+                        "organizations_count": len(organizations),
+                        "last_used": now
+                    }).eq("filter_id", filter_id).execute()
+                    
+                except Exception as e:
+                    logger.warning(f"Failed to write filtered organizations to Supabase: {e}")
             
             logger.info(f"Saved {len(organizations)} filtered organizations for filter {filter_id}")
             

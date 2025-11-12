@@ -1,0 +1,18 @@
+Attended,City,Country_Region,Full Name,Industry,_id,companyName,email,firstName,lastName,phone,state,stateSystem
+YES,Milton,United Kingdom,Stephan Munz,,lea_aENm5b2aQ7k42Bita,Wm-Feuerwehrtechnik,smunz@wm-feuerwehrtechnik.de,Stephan,Munz,,emailsOpened,inProgress
+NO,Lauenau,Germany,Frederik Ratzmann,,lea_iKGxFKPCSE3kqFGrf,BERR-Hochdruck GmbH,er@berr.de,Frederik,Ratzmann,01717738822,emailsOpened,inProgress
+YES,Havixbeck,Germany,Lukas Biermann,Sporting Goods,lea_wCgKo9ZoaDy7gA4Z6,Leeze GmbH,lukas@leeze.de,Lukas,Biermann,+4925075499695,emailsOpened,inProgress
+NO,Besigheim,Germany,David Niemes,,lea_Hbg8Yd6984vror28R,NieRuf,niemes@nieruf.de,David,Niemes,,aircallDone,inProgress
+YES,Duisburg,Germany,Fabian Rueda,Food & Beverages,lea_CyGuzWSu6sMJekE3i,Chili Mafia,scharfscharfbaby@chilimafia.com,Fabian,Rueda,+4915902198738,emailsOpened,inProgress
+NO,Osnabrück,Germany,Servet Akbas,,lea_MkF3WaJ3ZsFafGNMk,e-factory.de,servet@e-factory.de,Servet,Akbas,,aircallDone,inProgress
+YES,,Germany,Raphael Wagner,,lea_FKFWFkvptZ4o86Wa3,ksw24.com,raphael.wagner@ksw24.com,Raphael,Wagner,,emailsOpened,inProgress
+YES,Hamburg,Germany,Christoph Friedrich Wurm,,lea_aGFbZKNQQRYkdE26T,juwem.at,wurm@juwem.at,Christoph,Friedrich Wurm,,aircallDone,inProgress
+YES,Wolfsburg,Germany,Elvir Zekovic,Textiles,lea_a2r4MQSQaPvo4EwTe,Prevent Group,elvir.zekovic@preventgroup.com,Elvir,Zekovic,+493075436080,aircallDone,inProgress
+NO,Bedburg,Germany,David Kochon,,lea_XdA8Ag7ch2TtMHCeK,Eingelocht,hallo@eingelocht.de,David,Kochon,,emailsOpened,inProgress
+NO,,Germany,Christian Schumm,,lea_vCvcZ76hfLBx23aMi,Sparkstill GmbH,cs@sparkstill.com,Christian,Schumm,,aircallDone,inProgress
+YES,Schmalkaladen,Germany,Matthias Herrmann,Mechanical or Industrial Engineering,lea_kJGM5bjK7hFGBwA8T,wev Schmalkalden,m.herrmann@sinkfix.de,Matthias,Herrmann,+4936836465689,emailsClicked,inProgress
+NO,,Germany,Felix Athen,,lea_oBMviB8Zf6WHynj7h,Dr. Johanna Budwig gmbh,fa@djb24.de,Felix,Athen,,emailsOpened,inProgress
+YES,Rain am Lech,Germany,Peter Sandmeir,,lea_wBLJJH6jJ4Kwk6pb5,sandmeir,peter.jun@sandmeir.de,Peter,Sandmeir,,aircallDone,inProgress
+YES,Hamburg,Germany,Benjamin Breuell,,lea_f6zNfBCt9bwJFsSEy,Breuell Hilgenfeldt Holding,benjaminbreuell@breuell-hilgenfeldt-holding.de,Benjamin,Breuell,+49405380920,aircallDone,inProgress
+NO,Münster,Germany,Aiman Atassi,,lea_3cX67WBGypSEumbkS,Jalall D’or GmbH,aiman@jalalldor.de,Aiman,Atassi,+491715563400,aircallDone,inProgress
+YES,,Germany,Kai Tholen,,lea_nzCZxXBgctKvfDMQX,GartenLand-Vogt,k.tholen@gartenland-vogt.de,Kai,Tholen,,aircallDone,inProgress

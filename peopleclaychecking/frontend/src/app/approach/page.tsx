@@ -31,8 +31,8 @@ export default function ApproachPage() {
   const navItems = [
     { id: "network-commit", label: "NETWORK UPLOAD", href: "/network-commit" },
     { id: "company-checking", label: "PEOPLE CHECKING", href: "/company-checking" },
+    { id: "overview", label: "ANALYTICS", href: "/overview" },
     { id: "push-activity", label: "PUSH ACTIVITY", href: "/push-activity" },
-    { id: "approach", label: "APPROACH", href: "/approach" },
   ];
 
   // Function to fetch data from backend with filter context

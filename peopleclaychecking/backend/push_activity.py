@@ -9,6 +9,16 @@ import logging
 from typing import Dict, List, Any, Optional, Set
 from datetime import datetime
 import json
+import os
+
+# Try to import Supabase client
+try:
+    from supabase_client import get_supabase_client
+    SUPABASE_AVAILABLE = True
+except ImportError:
+    SUPABASE_AVAILABLE = False
+    logger = logging.getLogger(__name__)
+    logger.warning("Supabase client not available. Install supabase package to enable Supabase support.")
 
 # Configure logging
 logging.basicConfig(
@@ -24,9 +34,20 @@ logger = logging.getLogger(__name__)
 class PushActivityDatabase:
     """Handles SQLite database operations for push activity tracking"""
     
-    def __init__(self, db_path: str = "push_activity.db"):
+    def __init__(self, db_path: str = "push_activity.db", use_supabase: bool = True):
         self.db_path = db_path
+        self.use_supabase = use_supabase and SUPABASE_AVAILABLE
         self._init_database()
+        
+        # Initialize Supabase client if available
+        self.supabase_client = None
+        if self.use_supabase:
+            try:
+                self.supabase_client = get_supabase_client()
+                logger.info("Supabase client initialized for push activity")
+            except Exception as e:
+                logger.warning(f"Failed to initialize Supabase client: {e}. Continuing with SQLite only.")
+                self.use_supabase = False
     
     def _init_database(self):
         """Initialize the database with push activity tables"""
@@ -212,6 +233,9 @@ class PushActivityDatabase:
             # Add new campaigns
             for campaign in new_campaigns:
                 if campaign['_id'] in added_campaigns:
+                    now = datetime.now().isoformat()
+                    
+                    # Write to SQLite
                     cursor.execute('''
                         INSERT INTO campaigns (id, name, status, created_at, last_updated)
                         VALUES (?, ?, ?, ?, ?)
@@ -219,9 +243,24 @@ class PushActivityDatabase:
                         campaign['_id'],
                         campaign['name'],
                         campaign['status'],
-                        datetime.now().isoformat(),
-                        datetime.now().isoformat()
+                        now,
+                        now
                     ))
+                    
+                    # Write to Supabase
+                    if self.use_supabase:
+                        try:
+                            supabase = self.supabase_client.get_client()
+                            supabase.table("campaigns").upsert({
+                                "id": campaign['_id'],
+                                "name": campaign['name'],
+                                "status": campaign['status'],
+                                "created_at": now,
+                                "last_updated": now,
+                                "is_active": True
+                            }).execute()
+                        except Exception as e:
+                            logger.warning(f"Failed to write campaign to Supabase: {e}")
                     
                     # Log campaign addition
                     cursor.execute('''
@@ -229,23 +268,63 @@ class PushActivityDatabase:
                         VALUES (?, ?, ?)
                     ''', ('campaign_added', campaign['_id'], campaign['name']))
                     
+                    # Log to Supabase change_log
+                    if self.use_supabase:
+                        try:
+                            supabase = self.supabase_client.get_client()
+                            supabase.table("change_log").insert({
+                                "change_type": "campaign_added",
+                                "campaign_id": campaign['_id'],
+                                "campaign_name": campaign['name'],
+                                "change_timestamp": now
+                            }).execute()
+                        except Exception as e:
+                            logger.warning(f"Failed to write change_log to Supabase: {e}")
+                    
                     stats['campaigns_added'] += 1
                     logger.info(f"Added campaign: {campaign['name']}")
             
             # Mark removed campaigns as inactive
             for campaign_id in removed_campaigns:
                 campaign_name = current_campaigns[campaign_id]['name']
+                now = datetime.now().isoformat()
+                
+                # Update SQLite
                 cursor.execute('''
                     UPDATE campaigns 
                     SET is_active = 0, last_updated = ?
                     WHERE id = ?
-                ''', (datetime.now().isoformat(), campaign_id))
+                ''', (now, campaign_id))
+                
+                # Update Supabase
+                if self.use_supabase:
+                    try:
+                        supabase = self.supabase_client.get_client()
+                        supabase.table("campaigns").update({
+                            "is_active": False,
+                            "last_updated": now
+                        }).eq("id", campaign_id).execute()
+                    except Exception as e:
+                        logger.warning(f"Failed to update campaign in Supabase: {e}")
                 
                 # Log campaign removal
                 cursor.execute('''
                     INSERT INTO change_log (change_type, campaign_id, campaign_name)
                     VALUES (?, ?, ?)
                 ''', ('campaign_removed', campaign_id, campaign_name))
+                
+                # Log to Supabase change_log
+                if self.use_supabase:
+                    try:
+                        supabase = self.supabase_client.get_client()
+                        supabase.table("change_log").insert({
+                            "change_type": "campaign_removed",
+                            "campaign_id": campaign_id,
+                            "campaign_name": campaign_name,
+                            "change_timestamp": now
+                        }).execute()
+                    except Exception as e:
+                        logger.warning(f"Failed to write change_log to Supabase: {e}")
                 
                 stats['campaigns_removed'] += 1
                 logger.info(f"Removed campaign: {campaign_name}")
@@ -257,6 +336,9 @@ class PushActivityDatabase:
                     if (current_campaign['name'] != campaign['name'] or 
                         current_campaign['status'] != campaign['status']):
                         
+                        now = datetime.now().isoformat()
+                        
+                        # Update SQLite
                         cursor.execute('''
                             UPDATE campaigns 
                             SET name = ?, status = ?, last_updated = ?
@@ -264,11 +346,25 @@ class PushActivityDatabase:
                         ''', (
                             campaign['name'],
                             campaign['status'],
-                            datetime.now().isoformat(),
+                            now,
                             campaign['_id']
                         ))
                         
+                        # Update Supabase
+                        if self.use_supabase:
+                            try:
+                                supabase = self.supabase_client.get_client()
+                                supabase.table("campaigns").update({
+                                    "name": campaign['name'],
+                                    "status": campaign['status'],
+                                    "last_updated": now
+                                }).eq("id", campaign['_id']).execute()
+                            except Exception as e:
+                                logger.warning(f"Failed to update campaign in Supabase: {e}")
+                        
                         # Log campaign update
+                        old_value = json.dumps(current_campaign)
+                        new_value = json.dumps({'name': campaign['name'], 'status': campaign['status']})
                         cursor.execute('''
                             INSERT INTO change_log (change_type, campaign_id, campaign_name, old_value, new_value)
                             VALUES (?, ?, ?, ?, ?)
@@ -276,18 +372,37 @@ class PushActivityDatabase:
                             'campaign_updated',
                             campaign['_id'],
                             campaign['name'],
-                            json.dumps(current_campaign),
-                            json.dumps({'name': campaign['name'], 'status': campaign['status']})
+                            old_value,
+                            new_value
                         ))
+                        
+                        # Log to Supabase change_log
+                        if self.use_supabase:
+                            try:
+                                supabase = self.supabase_client.get_client()
+                                supabase.table("change_log").insert({
+                                    "change_type": "campaign_updated",
+                                    "campaign_id": campaign['_id'],
+                                    "campaign_name": campaign['name'],
+                                    "old_value": old_value,
+                                    "new_value": new_value,
+                                    "change_timestamp": now
+                                }).execute()
+                            except Exception as e:
+                                logger.warning(f"Failed to write change_log to Supabase: {e}")
                         
                         stats['campaigns_updated'] += 1
                         logger.info(f"Updated campaign: {campaign['name']}")
             
             # Record sync history
+            now = datetime.now().isoformat()
             cursor.execute('''
-                INSERT INTO sync_history (sync_type, campaigns_processed, campaigns_added, campaigns_removed)
-                VALUES (?, ?, ?, ?)
-            ''', ('incremental', len(new_campaigns), stats['campaigns_added'], stats['campaigns_removed']))
+                INSERT INTO sync_history (sync_type, campaigns_processed, campaigns_added, campaigns_removed, sync_timestamp)
+                VALUES (?, ?, ?, ?, ?)
+            ''', ('incremental', len(new_campaigns), stats['campaigns_added'], stats['campaigns_removed'], now))
+            
+            # Record sync history in Supabase (if sync_history table exists)
+            # Note: sync_history table might not be in Supabase schema, so we'll skip for now
             
             conn.commit()
             conn.close()
@@ -389,7 +504,10 @@ class PushActivityDatabase:
             campaign_result = cursor.fetchone()
             campaign_name = campaign_result[0] if campaign_result else f"Campaign {campaign_id}"
             
-            # Log the push activity
+            now = datetime.now().isoformat()
+            details = f"Pushed {companies_count} companies to webhook"
+            
+            # Log the push activity to SQLite
             cursor.execute('''
                 INSERT INTO change_log (change_type, campaign_id, campaign_name, details)
                 VALUES (?, ?, ?, ?)
@@ -397,8 +515,21 @@ class PushActivityDatabase:
                 push_type,
                 campaign_id,
                 campaign_name,
-                f"Pushed {companies_count} companies to webhook"
+                details
             ))
+            
+            # Log to Supabase change_log
+            if self.use_supabase:
+                try:
+                    supabase = self.supabase_client.get_client()
+                    supabase.table("change_log").insert({
+                        "change_type": push_type,
+                        "campaign_id": campaign_id,
+                        "campaign_name": campaign_name,
+                        "change_timestamp": now
+                    }).execute()
+                except Exception as e:
+                    logger.warning(f"Failed to write change_log to Supabase: {e}")
             
             conn.commit()
             conn.close()
@@ -739,7 +870,9 @@ class PushActivityClient:
             # Process added leads
             for lead in new_leads:
                 if lead['_id'] in added_lead_ids:
-                    # Insert new lead
+                    now = datetime.now().isoformat()
+                    
+                    # Insert new lead to SQLite
                     cursor.execute('''
                         INSERT INTO leads (id, campaign_id, email, first_name, last_name, 
                                          company_name, job_title, linkedin_url, state, state_system, 
@@ -756,11 +889,34 @@ class PushActivityClient:
                         lead.get('linkedinUrl'),
                         lead.get('state'),
                         lead.get('stateSystem'),
-                        datetime.now().isoformat(),
-                        datetime.now().isoformat()
+                        now,
+                        now
                     ))
                     
+                    # Insert lead to Supabase
+                    if self.database.use_supabase:
+                        try:
+                            supabase = self.database.supabase_client.get_client()
+                            supabase.table("leads").upsert({
+                                "id": lead['_id'],
+                                "campaign_id": campaign_id,
+                                "email": lead.get('email'),
+                                "first_name": lead.get('firstName'),
+                                "last_name": lead.get('lastName'),
+                                "company_name": lead.get('companyName'),
+                                "job_title": lead.get('jobTitle'),
+                                "linkedin_url": lead.get('linkedinUrl'),
+                                "state": lead.get('state'),
+                                "state_system": lead.get('stateSystem'),
+                                "created_at": now,
+                                "last_updated": now,
+                                "is_active": True
+                            }).execute()
+                        except Exception as e:
+                            logger.warning(f"Failed to write lead to Supabase: {e}")
+                    
                     # Log lead addition
+                    details = f"Lead added: {lead.get('firstName', '')} {lead.get('lastName', '')} ({lead.get('email', '')}) from {lead.get('companyName', 'N/A')}"
                     cursor.execute('''
                         INSERT INTO change_log (change_type, campaign_id, campaign_name, lead_id, lead_email, lead_company, details)
                         VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -771,8 +927,24 @@ class PushActivityClient:
                         lead['_id'],
                         lead.get('email'),
                         lead.get('companyName'),
-                        f"Lead added: {lead.get('firstName', '')} {lead.get('lastName', '')} ({lead.get('email', '')}) from {lead.get('companyName', 'N/A')}"
+                        details
                     ))
+                    
+                    # Log to Supabase change_log
+                    if self.database.use_supabase:
+                        try:
+                            supabase = self.database.supabase_client.get_client()
+                            supabase.table("change_log").insert({
+                                "change_type": "lead_added",
+                                "campaign_id": campaign_id,
+                                "campaign_name": campaign_name,
+                                "lead_id": lead['_id'],
+                                "lead_email": lead.get('email'),
+                                "lead_company": lead.get('companyName'),
+                                "change_timestamp": now
+                            }).execute()
+                        except Exception as e:
+                            logger.warning(f"Failed to write change_log to Supabase: {e}")
                     
                     changes['leads_added'] += 1
                     changes['added_leads'].append({
@@ -784,15 +956,28 @@ class PushActivityClient:
             # Process removed leads
             for lead_id in removed_lead_ids:
                 lead_data = current_leads[lead_id]
+                now = datetime.now().isoformat()
                 
-                # Mark lead as inactive
+                # Mark lead as inactive in SQLite
                 cursor.execute('''
                     UPDATE leads 
                     SET is_active = 0, last_updated = ?
                     WHERE id = ?
-                ''', (datetime.now().isoformat(), lead_id))
+                ''', (now, lead_id))
+                
+                # Mark lead as inactive in Supabase
+                if self.database.use_supabase:
+                    try:
+                        supabase = self.database.supabase_client.get_client()
+                        supabase.table("leads").update({
+                            "is_active": False,
+                            "last_updated": now
+                        }).eq("id", lead_id).execute()
+                    except Exception as e:
+                        logger.warning(f"Failed to update lead in Supabase: {e}")
                 
                 # Log lead removal
+                details = f"Lead removed: {lead_data['first_name']} {lead_data['last_name']} ({lead_data['email']}) from {lead_data['company_name'] or 'N/A'}"
                 cursor.execute('''
                     INSERT INTO change_log (change_type, campaign_id, campaign_name, lead_id, lead_email, lead_company, details)
                     VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -803,8 +988,24 @@ class PushActivityClient:
                     lead_id,
                     lead_data['email'],
                     lead_data['company_name'],
-                    f"Lead removed: {lead_data['first_name']} {lead_data['last_name']} ({lead_data['email']}) from {lead_data['company_name'] or 'N/A'}"
+                    details
                 ))
+                
+                # Log to Supabase change_log
+                if self.database.use_supabase:
+                    try:
+                        supabase = self.database.supabase_client.get_client()
+                        supabase.table("change_log").insert({
+                            "change_type": "lead_removed",
+                            "campaign_id": campaign_id,
+                            "campaign_name": campaign_name,
+                            "lead_id": lead_id,
+                            "lead_email": lead_data['email'],
+                            "lead_company": lead_data['company_name'],
+                            "change_timestamp": now
+                        }).execute()
+                    except Exception as e:
+                        logger.warning(f"Failed to write change_log to Supabase: {e}")
                 
                 changes['leads_removed'] += 1
                 changes['removed_leads'].append({

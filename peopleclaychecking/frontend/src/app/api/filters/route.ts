@@ -1,57 +1,80 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getUserFilters } from "@/lib/supabase-helpers";
 import sqlite3 from "sqlite3";
 import path from "path";
 import { spawn } from "child_process";
 
 export async function GET() {
   try {
-    // Path to the backend pipedrive database
-    const dbPath = path.join(process.cwd(), "../backend/pipedrive.db");
-    
-    return new Promise((resolve) => {
-      const db = new sqlite3.Database(dbPath, (err) => {
-        if (err) {
-          console.error("Error opening database:", err);
-          resolve(NextResponse.json({ error: "Database connection failed" }, { status: 500 }));
-          return;
-        }
-      });
+    // Try Supabase first
+    try {
+      const filters = await getUserFilters();
+      
+      // Add "ALL COMPANIES" option at the beginning
+      const allFilters = [
+        {
+          filter_id: null,
+          filter_name: "ALL COMPANIES",
+          filter_url: null,
+          organizations_count: null,
+          created_at: null,
+          last_used: null
+        },
+        ...(filters || [])
+      ];
+      
+      return NextResponse.json({ filters: allFilters });
+    } catch (supabaseError) {
+      console.log('Supabase fetch failed, falling back to SQLite:', supabaseError);
+      
+      // Fallback to SQLite
+      const dbPath = path.join(process.cwd(), "../backend/pipedrive.db");
+      
+      return new Promise((resolve) => {
+        const db = new sqlite3.Database(dbPath, (err) => {
+          if (err) {
+            console.error("Error opening database:", err);
+            resolve(NextResponse.json({ error: "Database connection failed" }, { status: 500 }));
+            return;
+          }
+        });
 
-      // Query to get all user filters
-      db.all(`
-        SELECT 
-          filter_id,
-          filter_name,
-          filter_url,
-          organizations_count,
-          created_at,
-          last_used
-        FROM user_filters 
-        ORDER BY created_at DESC
-      `, (err, rows: any[]) => {
-        if (err) {
-          console.error("Error querying user_filters table:", err);
-          resolve(NextResponse.json({ error: "Query failed" }, { status: 500 }));
-        } else {
-          // Add "ALL COMPANIES" option at the beginning
-          const filters = [
-            {
-              filter_id: null,
-              filter_name: "ALL COMPANIES",
-              filter_url: null,
-              organizations_count: null,
-              created_at: null,
-              last_used: null
-            },
-            ...(rows || [])
-          ];
+        // Query to get all user filters
+        db.all(`
+          SELECT 
+            filter_id,
+            filter_name,
+            filter_url,
+            organizations_count,
+            created_at,
+            last_used
+          FROM user_filters 
+          ORDER BY created_at DESC
+        `, (err, rows: any[]) => {
+          if (err) {
+            console.error("Error querying user_filters table:", err);
+            resolve(NextResponse.json({ error: "Query failed" }, { status: 500 }));
+          } else {
+            // Add "ALL COMPANIES" option at the beginning
+            const filters = [
+              {
+                filter_id: null,
+                filter_name: "ALL COMPANIES",
+                filter_url: null,
+                organizations_count: null,
+                created_at: null,
+                last_used: null
+              },
+              ...(rows || [])
+            ];
+            
+            resolve(NextResponse.json({ filters }));
+          }
           
-          resolve(NextResponse.json({ filters }));
-        }
-        
-        db.close();
+          db.close();
+        });
       });
-    });
+    }
   } catch (error) {
     console.error("API error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

@@ -1,70 +1,83 @@
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import { spawn } from "child_process";
+import { getCampaigns } from "@/lib/supabase-helpers";
 
 export async function GET() {
   try {
-    // Path to the push_activity.py script
-    const scriptPath = path.join(process.cwd(), "../backend/push_activity.py");
-    const backendDir = path.join(process.cwd(), "../backend");
-    
-    return new Promise((resolve) => {
-      // Execute the Python script to get current campaigns
-      const pythonProcess = spawn('bash', ['-c', `source venv/bin/activate && python3 "${scriptPath}" --get-campaigns`], {
-        cwd: backendDir,
-        stdio: ['pipe', 'pipe', 'pipe']
+    // Try Supabase first
+    try {
+      const campaigns = await getCampaigns();
+      return NextResponse.json({ 
+        success: true, 
+        campaigns: campaigns || [],
+        lastUpdate: new Date().toISOString()
       });
+    } catch (supabaseError) {
+      console.log('Supabase fetch failed, falling back to Python script:', supabaseError);
+      
+      // Fallback to Python script
+      const scriptPath = path.join(process.cwd(), "../backend/push_activity.py");
+      const backendDir = path.join(process.cwd(), "../backend");
+      
+      return new Promise((resolve) => {
+        // Execute the Python script to get current campaigns
+        const pythonProcess = spawn('bash', ['-c', `source venv/bin/activate && python3 "${scriptPath}" --get-campaigns`], {
+          cwd: backendDir,
+          stdio: ['pipe', 'pipe', 'pipe']
+        });
 
-      let stdout = '';
-      let stderr = '';
+        let stdout = '';
+        let stderr = '';
 
-      pythonProcess.stdout.on('data', (data) => {
-        stdout += data.toString();
-      });
+        pythonProcess.stdout.on('data', (data) => {
+          stdout += data.toString();
+        });
 
-      pythonProcess.stderr.on('data', (data) => {
-        stderr += data.toString();
-      });
+        pythonProcess.stderr.on('data', (data) => {
+          stderr += data.toString();
+        });
 
-      pythonProcess.on('close', (code) => {
-        if (code === 0) {
-          console.log('Push activity data retrieved successfully');
-          
-          try {
-            // Parse JSON output from the backend
-            const result = JSON.parse(stdout);
+        pythonProcess.on('close', (code) => {
+          if (code === 0) {
+            console.log('Push activity data retrieved successfully');
+            
+            try {
+              // Parse JSON output from the backend
+              const result = JSON.parse(stdout);
+              resolve(NextResponse.json({ 
+                success: true, 
+                campaigns: result.campaigns || [],
+                lastUpdate: result.lastUpdate
+              }));
+            } catch (parseError) {
+              console.error("Failed to parse Python script output:", parseError);
+              resolve(NextResponse.json({ 
+                success: false, 
+                error: "Failed to parse script output", 
+                details: stdout 
+              }, { status: 500 }));
+            }
+          } else {
+            console.error('Push activity retrieval failed with code:', code);
+            console.error('Error output:', stderr);
             resolve(NextResponse.json({ 
-              success: true, 
-              campaigns: result.campaigns || [],
-              lastUpdate: result.lastUpdate
-            }));
-          } catch (parseError) {
-            console.error("Failed to parse Python script output:", parseError);
-            resolve(NextResponse.json({ 
-              success: false, 
-              error: "Failed to parse script output", 
-              details: stdout 
+              error: "Failed to retrieve push activity data", 
+              details: stderr,
+              code: code
             }, { status: 500 }));
           }
-        } else {
-          console.error('Push activity retrieval failed with code:', code);
-          console.error('Error output:', stderr);
-          resolve(NextResponse.json({ 
-            error: "Failed to retrieve push activity data", 
-            details: stderr,
-            code: code
-          }, { status: 500 }));
-        }
-      });
+        });
 
-      pythonProcess.on('error', (error) => {
-        console.error('Failed to start Python process:', error);
-        resolve(NextResponse.json({ 
-          error: "Failed to execute push activity script", 
-          details: error.message
-        }, { status: 500 }));
+        pythonProcess.on('error', (error) => {
+          console.error('Failed to start Python process:', error);
+          resolve(NextResponse.json({ 
+            error: "Failed to execute push activity script", 
+            details: error.message
+          }, { status: 500 }));
+        });
       });
-    });
+    }
   } catch (error) {
     console.error("API error:", error);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });

@@ -1,0 +1,935 @@
+{
+  "organization_id": 619,
+  "organization_name": "Taifun-Tofu GmbH",
+  "total_fields": 116,
+  "fields": [
+    {
+      "id": 4012,
+      "key": "id",
+      "name": "ID",
+      "field_type": "int",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4002,
+      "key": "name",
+      "name": "Name",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4004,
+      "key": "owner_id",
+      "name": "Owner",
+      "field_type": "user",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4005,
+      "key": "people_count",
+      "name": "People",
+      "field_type": "double",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4006,
+      "key": "open_deals_count",
+      "name": "Open deals",
+      "field_type": "double",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4007,
+      "key": "add_time",
+      "name": "Organization created",
+      "field_type": "date",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4008,
+      "key": "update_time",
+      "name": "Update time",
+      "field_type": "date",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4009,
+      "key": "visible_to",
+      "name": "Visible to",
+      "field_type": "visible_to",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4010,
+      "key": "next_activity_date",
+      "name": "Next activity date",
+      "field_type": "date",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4011,
+      "key": "last_activity_date",
+      "name": "Last activity date",
+      "field_type": "date",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4013,
+      "key": "won_deals_count",
+      "name": "Won deals",
+      "field_type": "int",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4014,
+      "key": "lost_deals_count",
+      "name": "Lost deals",
+      "field_type": "int",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4015,
+      "key": "closed_deals_count",
+      "name": "Closed deals",
+      "field_type": "int",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4016,
+      "key": "activities_count",
+      "name": "Total activities",
+      "field_type": "int",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4017,
+      "key": "done_activities_count",
+      "name": "Done activities",
+      "field_type": "int",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4018,
+      "key": "undone_activities_count",
+      "name": "Activities to do",
+      "field_type": "int",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4019,
+      "key": "email_messages_count",
+      "name": "Email messages count",
+      "field_type": "int",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4020,
+      "key": "picture_id",
+      "name": "Profile picture",
+      "field_type": "picture",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4106,
+      "key": "website",
+      "name": "Website",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4107,
+      "key": "linkedin",
+      "name": "LinkedIn profile",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4109,
+      "key": "annual_revenue",
+      "name": "Annual revenue",
+      "field_type": "enum",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4110,
+      "key": "employee_count",
+      "name": "Number of employees",
+      "field_type": "int",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4105,
+      "key": "ebdc2728f0d8ad16d78928243db330d7550235c7",
+      "name": "Awareness Stage",
+      "field_type": "enum",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4063,
+      "key": "label_ids",
+      "name": "Labels",
+      "field_type": "set",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4060,
+      "key": "7365c754b9948ad643664fb47d175c0b41e16c4b",
+      "name": "Customer ID (Nova)",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4066,
+      "key": "154a0fabf23154707776dff689fa512cce7cb0d5",
+      "name": "Company Nickname",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4059,
+      "key": "6257d6a75c7f7e6286cab80982e62884b324915c",
+      "name": "Website URL",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4067,
+      "key": "1d7549560dc1767454324f3c26566bea8c5085eb",
+      "name": "LinkedIn URL",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4021,
+      "key": "address",
+      "name": "Address",
+      "field_type": "address",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": null,
+      "key": "address_lat",
+      "name": "Latitude of Address",
+      "field_type": "double",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": null,
+      "key": "address_long",
+      "name": "Longitude of Address",
+      "field_type": "double",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": null,
+      "key": "address_subpremise",
+      "name": "Apartment/suite no of Address",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": null,
+      "key": "address_street_number",
+      "name": "House number of Address",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": null,
+      "key": "address_route",
+      "name": "Street/road name of Address",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": null,
+      "key": "address_sublocality",
+      "name": "District/sublocality of Address",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": null,
+      "key": "address_locality",
+      "name": "City/town/village/locality of Address",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": null,
+      "key": "address_admin_area_level_1",
+      "name": "State/county of Address",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": null,
+      "key": "address_admin_area_level_2",
+      "name": "Region of Address",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": null,
+      "key": "address_country",
+      "name": "Country of Address",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": null,
+      "key": "address_postal_code",
+      "name": "ZIP/Postal code of Address",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": null,
+      "key": "address_formatted_address",
+      "name": "Full/combined address of Address",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4070,
+      "key": "72b486b4af655068679f9a3c9c89ee1b2365db35",
+      "name": "HQ Address",
+      "field_type": "address",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": null,
+      "key": "72b486b4af655068679f9a3c9c89ee1b2365db35_lat",
+      "name": "Latitude of HQ Address",
+      "field_type": "double",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": null,
+      "key": "72b486b4af655068679f9a3c9c89ee1b2365db35_long",
+      "name": "Longitude of HQ Address",
+      "field_type": "double",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": null,
+      "key": "72b486b4af655068679f9a3c9c89ee1b2365db35_subpremise",
+      "name": "Apartment/suite no of HQ Address",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": null,
+      "key": "72b486b4af655068679f9a3c9c89ee1b2365db35_street_number",
+      "name": "House number of HQ Address",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": null,
+      "key": "72b486b4af655068679f9a3c9c89ee1b2365db35_route",
+      "name": "Street/road name of HQ Address",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": null,
+      "key": "72b486b4af655068679f9a3c9c89ee1b2365db35_sublocality",
+      "name": "District/sublocality of HQ Address",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": null,
+      "key": "72b486b4af655068679f9a3c9c89ee1b2365db35_locality",
+      "name": "City/town/village/locality of HQ Address",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": null,
+      "key": "72b486b4af655068679f9a3c9c89ee1b2365db35_admin_area_level_1",
+      "name": "State/county of HQ Address",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": null,
+      "key": "72b486b4af655068679f9a3c9c89ee1b2365db35_admin_area_level_2",
+      "name": "Region of HQ Address",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": null,
+      "key": "72b486b4af655068679f9a3c9c89ee1b2365db35_country",
+      "name": "Country of HQ Address",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": null,
+      "key": "72b486b4af655068679f9a3c9c89ee1b2365db35_postal_code",
+      "name": "ZIP/Postal code of HQ Address",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": null,
+      "key": "72b486b4af655068679f9a3c9c89ee1b2365db35_formatted_address",
+      "name": "Full/combined address of HQ Address",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4069,
+      "key": "6381a3c7133975e3f72bae5302e2eac453772303",
+      "name": "HQ Country",
+      "field_type": "address",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": null,
+      "key": "6381a3c7133975e3f72bae5302e2eac453772303_lat",
+      "name": "Latitude of HQ Country",
+      "field_type": "double",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": null,
+      "key": "6381a3c7133975e3f72bae5302e2eac453772303_long",
+      "name": "Longitude of HQ Country",
+      "field_type": "double",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": null,
+      "key": "6381a3c7133975e3f72bae5302e2eac453772303_subpremise",
+      "name": "Apartment/suite no of HQ Country",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": null,
+      "key": "6381a3c7133975e3f72bae5302e2eac453772303_street_number",
+      "name": "House number of HQ Country",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": null,
+      "key": "6381a3c7133975e3f72bae5302e2eac453772303_route",
+      "name": "Street/road name of HQ Country",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": null,
+      "key": "6381a3c7133975e3f72bae5302e2eac453772303_sublocality",
+      "name": "District/sublocality of HQ Country",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": null,
+      "key": "6381a3c7133975e3f72bae5302e2eac453772303_locality",
+      "name": "City/town/village/locality of HQ Country",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": null,
+      "key": "6381a3c7133975e3f72bae5302e2eac453772303_admin_area_level_1",
+      "name": "State/county of HQ Country",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": null,
+      "key": "6381a3c7133975e3f72bae5302e2eac453772303_admin_area_level_2",
+      "name": "Region of HQ Country",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": null,
+      "key": "6381a3c7133975e3f72bae5302e2eac453772303_country",
+      "name": "Country of HQ Country",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": null,
+      "key": "6381a3c7133975e3f72bae5302e2eac453772303_postal_code",
+      "name": "ZIP/Postal code of HQ Country",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": null,
+      "key": "6381a3c7133975e3f72bae5302e2eac453772303_formatted_address",
+      "name": "Full/combined address of HQ Country",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4058,
+      "key": "8370aa3cc964ba867d6b5b89d3fc1f8db8eaff8e",
+      "name": "Account Status",
+      "field_type": "enum",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4078,
+      "key": "2f5cecb3007bd8e62eb74d4c05f97aa6c9631856",
+      "name": "Network Status",
+      "field_type": "enum",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4055,
+      "key": "e88b41721feb08dab3a606588251e9c863980718",
+      "name": "Organization Type",
+      "field_type": "set",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4003,
+      "key": "label",
+      "name": "Label",
+      "field_type": "enum",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4036,
+      "key": "c20fba1ac436a1696af655efd7312322d90cd7da",
+      "name": "Industry",
+      "field_type": "enum",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4079,
+      "key": "d616c1c03d3f7d8e5c7ec4e7e9e4b457f1047b6a",
+      "name": "Tier / Priority",
+      "field_type": "enum",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4080,
+      "key": "35b5ed5d559100ed22a9a7189e8f229689cc6124",
+      "name": "ERP System",
+      "field_type": "set",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4094,
+      "key": "36c5ebef405aff01b45134ff8db5fa2cc09fe509",
+      "name": "Founding Date",
+      "field_type": "date",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4081,
+      "key": "9a8fe78f7c847b2ce9a0f1172ae92e7ceec57cbb",
+      "name": "EDI Provider",
+      "field_type": "set",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4122,
+      "key": "0870e1829c743039d639a0b24d39499de8d4575c",
+      "name": "Implementation Partner",
+      "field_type": "org",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4071,
+      "key": "3425272588b473566a2b6d539b3e40b85a9bb8a6",
+      "name": "Annual Revenue",
+      "field_type": "monetary",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": null,
+      "key": "3425272588b473566a2b6d539b3e40b85a9bb8a6_currency",
+      "name": "Currency of Annual Revenue",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4022,
+      "key": "e99bd5ac5be366a6b0394725cd3edbc44a00cceb",
+      "name": "Notes",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4098,
+      "key": "60cdc3abf6b1190cd312d008c72ae1291a272613",
+      "name": "Revenue Range",
+      "field_type": "enum",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4099,
+      "key": "17b6ecb8c75ba87c19c99660ec89c24712aff2d9",
+      "name": "Procuros Connector",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4100,
+      "key": "20fcd30ecd8883bd42e8535d0485a16437404fde",
+      "name": "Connected Partners",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4089,
+      "key": "19f47a5810261d52135b095993163b55b8030b0a",
+      "name": "Total Active Suppliers",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4090,
+      "key": "0f203f7b7b5eb0961c1112067e26821f5f9527a4",
+      "name": "Total In-Scope Suppliers",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4072,
+      "key": "1963bccc9eb2fd493a8b69e4353da192a2e36a49",
+      "name": "Number of Employees",
+      "field_type": "double",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4076,
+      "key": "2f34f26b67aabae8c5127efe8c330c9ab5d97bdb",
+      "name": "Number of Website Visitors",
+      "field_type": "double",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4075,
+      "key": "b78dcce59ccedf96b2d8504ac4bb354e4b8c76c1",
+      "name": "Number of Retail Locations",
+      "field_type": "double",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4074,
+      "key": "b61e690ab470abac5b21649063e03780225bfe64",
+      "name": "Number of Trade Partners",
+      "field_type": "double",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4073,
+      "key": "78d83ceb0e7dd77fd92adff720324493af728a0a",
+      "name": "Number of SKUs",
+      "field_type": "double",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4093,
+      "key": "ef923d78d1dcd7d88bedc136eecefd01afddfeb9",
+      "name": "Retailers (CLAYDATA)",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4108,
+      "key": "industry",
+      "name": "Industry",
+      "field_type": "enum",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4101,
+      "key": "92469ea81d3dbd65f0592e89cfc5008922cfb378",
+      "name": "Nova Link",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4091,
+      "key": "f8f0c9f23c50c491921ad999ca5c2a5506ba427c",
+      "name": "Total Suppliers planned*",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4092,
+      "key": "ee5b45b3b42ff60686fbc32362b39811c8956cd9",
+      "name": "Billing E-Mail",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4088,
+      "key": "7bf80d047b827656df0bb1ba950c0358a393c5a5",
+      "name": "Churn reason",
+      "field_type": "enum",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4087,
+      "key": "f27a2d67ee49ebcd49c19b361496c348c8cc7092",
+      "name": "Cancellation Date",
+      "field_type": "date",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4062,
+      "key": "3ba627948bc8667f8ff7d671b3cba0540a9d1005",
+      "name": "Churn Date (contract end)",
+      "field_type": "date",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4061,
+      "key": "6a293ef31d9d2ce85a894223095c79c1b2b5dfc7",
+      "name": "CSAT",
+      "field_type": "double",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4065,
+      "key": "67bc827381f05fd85f09182627924dfe3caa52c7",
+      "name": "Priority / Critical Account",
+      "field_type": "enum",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4064,
+      "key": "391d3fea86fbd0031e2131ae44e99e375f661d2f",
+      "name": "Critical Customer (CX)",
+      "field_type": "double",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4120,
+      "key": "e0f707989f7bb7b3091811fc92b3d716988d966a",
+      "name": "Order OCR",
+      "field_type": "enum",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4119,
+      "key": "dc972e3049b1267a4f16601c751119078cdf568b",
+      "name": "Remittance Advice",
+      "field_type": "enum",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4118,
+      "key": "ea3082e0e78938e72279b40ccf004344c26c49e9",
+      "name": "Extended Fulfilment",
+      "field_type": "enum",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4117,
+      "key": "ffc8ec6a55fb56bc673b108a78eae2d474fc631b",
+      "name": "Fulfilment (light or integrated)",
+      "field_type": "enum",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4116,
+      "key": "157b2c18b4acc3cb11c65204acb14c4f82ef649c",
+      "name": "Order Form",
+      "field_type": "enum",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4082,
+      "key": "a003e00ea66e830f3c9f76143cbd3eb701462d38",
+      "name": "completely cleaned",
+      "field_type": "enum",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4084,
+      "key": "e519d14345532916d191cc90d0a10207cf797a94",
+      "name": "PrestigeCustomerVariable (for Outreach)",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4085,
+      "key": "bc0e56abf0b4736c61589e23a05b822967011d65",
+      "name": "SupplierVariable (for Outreach)",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4086,
+      "key": "de9f363c5a203cab87322369592ebc96b5d4a3ce",
+      "name": "BereichVariable (for Outreach)",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4095,
+      "key": "8112102d0f9ba36bb1eb144a2119f521c5b5da03",
+      "name": "E-mail",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4096,
+      "key": "7003f0cfaefdc31d934729c1858e4a9a105ec225",
+      "name": "Phone Numer",
+      "field_type": "phone",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4102,
+      "key": "25e04c398b56f818ea66a38d0b52c291bd0dae12",
+      "name": "Source of Company",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4103,
+      "key": "b761b20e772500dc37f0e408aa497b60c2832c2b",
+      "name": "LinkedIn Followers",
+      "field_type": "double",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4112,
+      "key": "7c9a93e2295ddd798caaf261d6c1fdab40151390",
+      "name": "Document message count (static)",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    },
+    {
+      "id": 4113,
+      "key": "6fb4a9ae21f5ced363ae2575a0f43fc8f2ecebca",
+      "name": "Portal visits (static)",
+      "field_type": "varchar",
+      "mandatory": false,
+      "options": []
+    }
+  ]
+}
