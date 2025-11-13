@@ -56,65 +56,108 @@ export default function PushActivity() {
     try {
       setIsUpdating(true); // Use sync loading animation instead of separate loading
       
-      // Fetch campaigns and change log in parallel
-      const [campaignsResponse, changelogResponse] = await Promise.all([
-        fetch('/api/push-activity'),
-        fetch('/api/push-activity/changelog?limit=20')
-      ]);
+      let newCampaigns: Campaign[] = [];
       
-      const campaignsData = await campaignsResponse.json();
-      const changelogData = await changelogResponse.json();
-      
-      console.log('[push-activity-page] API Response:', {
-        campaignsSuccess: campaignsData.success,
-        campaignsCount: campaignsData.campaigns?.length || 0,
-        campaigns: campaignsData.campaigns,
-        error: campaignsData.error
-      });
-      
-      if (campaignsData.success) {
-        const newCampaigns = campaignsData.campaigns || [];
-        console.log(`[push-activity-page] Setting ${newCampaigns.length} campaigns`);
+      // Try Supabase directly from client-side first (more reliable in production)
+      try {
+        const { getCampaigns, getUniqueCompaniesByCampaign, getChangeLog } = await import("@/lib/supabase-helpers");
         
-        if (newCampaigns.length === 0) {
-          console.warn('[push-activity-page] No campaigns returned. Possible reasons:');
-          console.warn('[push-activity-page] 1. No campaigns in Supabase with is_active = true');
-          console.warn('[push-activity-page] 2. All campaigns have ≤1 unique companies (filtered out)');
-          console.warn('[push-activity-page] 3. All leads are paused (filtered out)');
-          console.warn('[push-activity-page] Check /api/debug/diagnose for detailed diagnostics');
-        }
+        // Fetch campaigns and change log in parallel
+        const [campaignsList, changeLogData] = await Promise.all([
+          getCampaigns(),
+          getChangeLog(20)
+        ]);
         
-        const currentCampaignIds = new Set(campaigns.map(c => c.id));
-        const newlyDiscovered = new Set<string>();
+        console.log(`[push-activity-page] Found ${campaignsList.length} campaigns from Supabase`);
         
-        // Only find newly discovered campaigns if we had previous campaigns to compare against
-        if (campaigns.length > 0) {
-          newCampaigns.forEach((campaign: Campaign) => {
-            if (!currentCampaignIds.has(campaign.id)) {
-              newlyDiscovered.add(campaign.id);
+        // Enrich campaigns with unique_company_count
+        const enrichedCampaigns = await Promise.all(
+          campaignsList.map(async (campaign) => {
+            try {
+              const uniqueCompanies = await getUniqueCompaniesByCampaign(campaign.id);
+              const count = uniqueCompanies.length;
+              return {
+                id: campaign.id,
+                name: campaign.name,
+                status: campaign.status,
+                unique_company_count: count
+              };
+            } catch (error) {
+              console.error(`[push-activity-page] Error getting unique companies for campaign ${campaign.id}:`, error);
+              return {
+                id: campaign.id,
+                name: campaign.name,
+                status: campaign.status,
+                unique_company_count: 0
+              };
             }
-          });
+          })
+        );
+        
+        // Filter out campaigns with 0 or 1 unique companies (same as API logic)
+        newCampaigns = enrichedCampaigns.filter(c => c.unique_company_count > 1);
+        console.log(`[push-activity-page] After filtering: ${newCampaigns.length} campaigns with >1 unique companies`);
+        
+        // Set change log
+        setChangeLog(changeLogData || []);
+        
+      } catch (supabaseError) {
+        console.log('[push-activity-page] Supabase fetch failed, using API fallback:', supabaseError);
+        
+        // Fall back to API route
+        const [campaignsResponse, changelogResponse] = await Promise.all([
+          fetch('/api/push-activity'),
+          fetch('/api/push-activity/changelog?limit=20')
+        ]);
+        
+        const campaignsData = await campaignsResponse.json();
+        const changelogData = await changelogResponse.json();
+        
+        console.log('[push-activity-page] API Response:', {
+          campaignsSuccess: campaignsData.success,
+          campaignsCount: campaignsData.campaigns?.length || 0,
+          error: campaignsData.error
+        });
+        
+        if (campaignsData.success) {
+          newCampaigns = campaignsData.campaigns || [];
         }
         
-        console.log('[push-activity-page] Setting campaigns state:', newCampaigns.length, 'campaigns');
-        setCampaigns(newCampaigns);
-        setNewlyDiscoveredCampaigns(newlyDiscovered);
-        setLastUpdate(new Date().toISOString());
-      } else {
-        console.error('[push-activity-page] Failed to fetch campaigns:', campaignsData.error);
-        console.error('[push-activity-page] Error details:', campaignsData.errorDetails);
-        console.error('[push-activity-page] Environment:', campaignsData.environment);
-        // Still set empty array to show "no campaigns" message
-        setCampaigns([]);
+        if (changelogData.success) {
+          setChangeLog(changelogData.changeLog || []);
+        }
       }
       
-      if (changelogData.success) {
-        setChangeLog(changelogData.changeLog || []);
-      } else {
-        console.error('Failed to fetch change log:', changelogData.error);
+      if (newCampaigns.length === 0) {
+        console.warn('[push-activity-page] No campaigns returned. Possible reasons:');
+        console.warn('[push-activity-page] 1. No campaigns in Supabase with is_active = true');
+        console.warn('[push-activity-page] 2. All campaigns have ≤1 unique companies (filtered out)');
+        console.warn('[push-activity-page] 3. All leads are paused (filtered out)');
+        console.warn('[push-activity-page] Check /api/debug/diagnose for detailed diagnostics');
       }
+      
+      const currentCampaignIds = new Set(campaigns.map(c => c.id));
+      const newlyDiscovered = new Set<string>();
+      
+      // Only find newly discovered campaigns if we had previous campaigns to compare against
+      if (campaigns.length > 0) {
+        newCampaigns.forEach((campaign: Campaign) => {
+          if (!currentCampaignIds.has(campaign.id)) {
+            newlyDiscovered.add(campaign.id);
+          }
+        });
+      }
+      
+      console.log('[push-activity-page] Setting campaigns state:', newCampaigns.length, 'campaigns');
+      setCampaigns(newCampaigns);
+      setNewlyDiscoveredCampaigns(newlyDiscovered);
+      setLastUpdate(new Date().toISOString());
+      
     } catch (error) {
       console.error('Error fetching data:', error);
+      // Set empty arrays on error to show "no campaigns" message
+      setCampaigns([]);
+      setChangeLog([]);
     } finally {
       setIsUpdating(false); // Use sync loading animation instead of separate loading
       setIsInitialLoad(false); // Mark that initial load is complete

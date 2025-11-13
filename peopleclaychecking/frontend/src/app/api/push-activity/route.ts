@@ -70,7 +70,8 @@ export async function GET() {
       });
       
       // On Vercel/production, Python scripts are not available
-      // Return error details for debugging
+      // Return success: true with empty campaigns to prevent UI from breaking
+      // Include error details for debugging
       if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
         console.error('[push-activity] Running on Vercel/production - Supabase failed:', {
           error: supabaseError instanceof Error ? supabaseError.message : String(supabaseError),
@@ -78,8 +79,10 @@ export async function GET() {
           hasSupabaseKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
           supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL || 'not set'
         });
+        // Return success: true with empty campaigns so the page still renders
+        // The error details are included for debugging but won't break the UI
         return NextResponse.json({ 
-          success: false, 
+          success: true, 
           campaigns: [],
           lastUpdate: new Date().toISOString(),
           error: "Supabase connection failed",
