@@ -1,22 +1,62 @@
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import { spawn } from "child_process";
-import { getCampaigns } from "@/lib/supabase-helpers";
+
+// Force dynamic rendering to prevent build-time execution
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+export const fetchCache = 'force-no-store';
 
 export async function GET() {
   try {
-    // Try Supabase first
+    // Try Supabase first - lazy load to avoid build-time issues
     try {
+      const { getCampaigns, getUniqueCompaniesByCampaign } = await import("@/lib/supabase-helpers");
       const campaigns = await getCampaigns();
+      
+      // Enrich campaigns with unique_company_count
+      const enrichedCampaigns = await Promise.all(
+        campaigns.map(async (campaign) => {
+          try {
+            const uniqueCompanies = await getUniqueCompaniesByCampaign(campaign.id);
+            return {
+              ...campaign,
+              unique_company_count: uniqueCompanies.length
+            };
+          } catch (error) {
+            console.error(`Error getting unique companies for campaign ${campaign.id}:`, error);
+            return {
+              ...campaign,
+              unique_company_count: 0
+            };
+          }
+        })
+      );
+      
+      // Filter out campaigns with 0 or 1 unique companies (same as Python script logic)
+      const filteredCampaigns = enrichedCampaigns.filter(c => c.unique_company_count > 1);
+      
       return NextResponse.json({ 
         success: true, 
-        campaigns: campaigns || [],
+        campaigns: filteredCampaigns || [],
         lastUpdate: new Date().toISOString()
       });
     } catch (supabaseError) {
-      console.log('Supabase fetch failed, falling back to Python script:', supabaseError);
+      console.log('Supabase fetch failed:', supabaseError);
       
-      // Fallback to Python script
+      // On Vercel/production, Python scripts are not available
+      // Return empty campaigns array instead of trying to run Python
+      if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
+        console.log('Running on Vercel/production - skipping Python fallback');
+        return NextResponse.json({ 
+          success: true, 
+          campaigns: [],
+          lastUpdate: new Date().toISOString(),
+          error: "Supabase connection failed - no campaigns available"
+        });
+      }
+      
+      // Fallback to Python script (only in local development)
       const scriptPath = path.join(process.cwd(), "../backend/push_activity.py");
       const backendDir = path.join(process.cwd(), "../backend");
       
@@ -52,35 +92,48 @@ export async function GET() {
               }));
             } catch (parseError) {
               console.error("Failed to parse Python script output:", parseError);
+              // Return empty campaigns instead of error
               resolve(NextResponse.json({ 
-                success: false, 
-                error: "Failed to parse script output", 
-                details: stdout 
-              }, { status: 500 }));
+                success: true, 
+                campaigns: [],
+                lastUpdate: new Date().toISOString(),
+                error: "Failed to parse script output"
+              }));
             }
           } else {
             console.error('Push activity retrieval failed with code:', code);
             console.error('Error output:', stderr);
+            // Return empty campaigns instead of error
             resolve(NextResponse.json({ 
-              error: "Failed to retrieve push activity data", 
-              details: stderr,
-              code: code
-            }, { status: 500 }));
+              success: true, 
+              campaigns: [],
+              lastUpdate: new Date().toISOString(),
+              error: "Failed to retrieve push activity data"
+            }));
           }
         });
 
         pythonProcess.on('error', (error) => {
           console.error('Failed to start Python process:', error);
+          // Return empty campaigns instead of error
           resolve(NextResponse.json({ 
-            error: "Failed to execute push activity script", 
-            details: error.message
-          }, { status: 500 }));
+            success: true, 
+            campaigns: [],
+            lastUpdate: new Date().toISOString(),
+            error: "Failed to execute push activity script"
+          }));
         });
       });
     }
   } catch (error) {
     console.error("API error:", error);
-    return NextResponse.json({ error: "Internal server error" }, { status: 500 });
+    // Return success with empty campaigns to prevent UI from breaking
+    return NextResponse.json({ 
+      success: true, 
+      campaigns: [],
+      lastUpdate: new Date().toISOString(),
+      error: "Internal server error"
+    });
   }
 }
 
