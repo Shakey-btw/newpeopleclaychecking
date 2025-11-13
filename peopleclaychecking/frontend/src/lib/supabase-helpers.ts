@@ -19,14 +19,29 @@ export interface Campaign {
 }
 
 export async function getCampaigns(): Promise<Campaign[]> {
-  const { data, error } = await supabase
-    .from('campaigns')
-    .select('*')
-    .eq('is_active', true)
-    .order('name');
-  
-  if (error) throw error;
-  return data || [];
+  try {
+    const { data, error } = await supabase
+      .from('campaigns')
+      .select('*')
+      .eq('is_active', true)
+      .order('name');
+    
+    if (error) {
+      console.error('[supabase-helpers] Error fetching campaigns:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+      });
+      throw error;
+    }
+    
+    console.log(`[supabase-helpers] getCampaigns: Found ${data?.length || 0} active campaigns`);
+    return data || [];
+  } catch (error: any) {
+    console.error('[supabase-helpers] getCampaigns failed:', error);
+    throw error;
+  }
 }
 
 export async function getCampaignById(id: string): Promise<Campaign | null> {
@@ -107,24 +122,42 @@ export async function getLeadsByCampaign(campaignId: string): Promise<Lead[]> {
 
 export async function getUniqueCompaniesByCampaign(campaignId: string): Promise<string[]> {
   // Paginate through all results since Supabase has a 1000 row limit
+  // IMPORTANT: Filter out paused leads to match Python script logic
   const uniqueCompanies = new Set<string>();
   let page = 0;
   const pageSize = 1000;
   let hasMore = true;
+  let totalLeadsProcessed = 0;
+  let pausedLeadsSkipped = 0;
   
   while (hasMore) {
     const { data, error } = await supabase
       .from('leads')
-      .select('company_name')
+      .select('company_name, state, state_system')
       .eq('campaign_id', campaignId)
       .eq('is_active', true)
       .not('company_name', 'is', null)
       .range(page * pageSize, (page + 1) * pageSize - 1);
     
-    if (error) throw error;
+    if (error) {
+      console.error(`[supabase-helpers] Error fetching leads for campaign ${campaignId}:`, {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code,
+      });
+      throw error;
+    }
     
     if (data && data.length > 0) {
+      totalLeadsProcessed += data.length;
       data.forEach(lead => {
+        // Skip paused leads (matching Python script logic)
+        if (lead.state_system === 'paused' || lead.state === 'paused') {
+          pausedLeadsSkipped++;
+          return;
+        }
+        
         if (lead.company_name) {
           uniqueCompanies.add(lead.company_name);
         }
@@ -137,22 +170,22 @@ export async function getUniqueCompaniesByCampaign(campaignId: string): Promise<
       hasMore = false;
     }
   }
+  
+  console.log(`[supabase-helpers] getUniqueCompaniesByCampaign(${campaignId}):`, {
+    totalLeadsProcessed,
+    pausedLeadsSkipped,
+    uniqueCompaniesCount: uniqueCompanies.size,
+  });
   
   return Array.from(uniqueCompanies);
 }
 
 export async function getCampaignStats(campaignId: string) {
-  // Get total count of leads (Supabase default limit is 1000, so we need to count)
-  const { count: totalLeads, error: countError } = await supabase
-    .from('leads')
-    .select('*', { count: 'exact', head: true })
-    .eq('campaign_id', campaignId)
-    .eq('is_active', true);
-  
-  if (countError) throw countError;
-  
-  // Get unique companies - we need to paginate through all results
-  // since Supabase has a 1000 row limit per query
+  // IMPORTANT: Filter out paused leads to match Python script logic
+  // Get total count of leads (excluding paused leads)
+  // Since Supabase doesn't support OR conditions easily in count queries,
+  // we'll need to fetch and filter manually
+  let totalLeadsCount = 0;
   const uniqueCompanies = new Set<string>();
   let page = 0;
   const pageSize = 1000;
@@ -161,16 +194,24 @@ export async function getCampaignStats(campaignId: string) {
   while (hasMore) {
     const { data, error } = await supabase
       .from('leads')
-      .select('company_name')
+      .select('company_name, state, state_system')
       .eq('campaign_id', campaignId)
       .eq('is_active', true)
-      .not('company_name', 'is', null)
       .range(page * pageSize, (page + 1) * pageSize - 1);
     
     if (error) throw error;
     
     if (data && data.length > 0) {
       data.forEach(lead => {
+        // Skip paused leads (matching Python script logic)
+        if (lead.state_system === 'paused' || lead.state === 'paused') {
+          return;
+        }
+        
+        // Count non-paused leads
+        totalLeadsCount++;
+        
+        // Add unique companies (excluding empty/null)
         if (lead.company_name) {
           uniqueCompanies.add(lead.company_name);
         }
@@ -184,7 +225,6 @@ export async function getCampaignStats(campaignId: string) {
     }
   }
   
-  const totalLeadsCount = totalLeads || 0;
   const uniqueCompaniesCount = uniqueCompanies.size;
   
   return {

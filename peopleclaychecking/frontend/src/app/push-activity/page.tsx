@@ -75,6 +75,15 @@ export default function PushActivity() {
       if (campaignsData.success) {
         const newCampaigns = campaignsData.campaigns || [];
         console.log(`[push-activity-page] Setting ${newCampaigns.length} campaigns`);
+        
+        if (newCampaigns.length === 0) {
+          console.warn('[push-activity-page] No campaigns returned. Possible reasons:');
+          console.warn('[push-activity-page] 1. No campaigns in Supabase with is_active = true');
+          console.warn('[push-activity-page] 2. All campaigns have ≤1 unique companies (filtered out)');
+          console.warn('[push-activity-page] 3. All leads are paused (filtered out)');
+          console.warn('[push-activity-page] Check /api/debug/diagnose for detailed diagnostics');
+        }
+        
         const currentCampaignIds = new Set(campaigns.map(c => c.id));
         const newlyDiscovered = new Set<string>();
         
@@ -93,6 +102,8 @@ export default function PushActivity() {
         setLastUpdate(new Date().toISOString());
       } else {
         console.error('[push-activity-page] Failed to fetch campaigns:', campaignsData.error);
+        console.error('[push-activity-page] Error details:', campaignsData.errorDetails);
+        console.error('[push-activity-page] Environment:', campaignsData.environment);
         // Still set empty array to show "no campaigns" message
         setCampaigns([]);
       }

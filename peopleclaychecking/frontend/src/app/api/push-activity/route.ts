@@ -12,9 +12,24 @@ export async function GET() {
     // Try Supabase first - lazy load to avoid build-time issues
     try {
       console.log('[push-activity] Fetching campaigns from Supabase...');
+      console.log('[push-activity] Environment check:', {
+        hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+        hasSupabaseKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+        supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL || 'NOT SET',
+        nodeEnv: process.env.NODE_ENV,
+        vercel: !!process.env.VERCEL,
+      });
+      
       const { getCampaigns, getUniqueCompaniesByCampaign } = await import("@/lib/supabase-helpers");
       const campaigns = await getCampaigns();
       console.log(`[push-activity] Found ${campaigns.length} campaigns from Supabase`);
+      
+      if (campaigns.length === 0) {
+        console.warn('[push-activity] WARNING: No campaigns found in Supabase. This could mean:');
+        console.warn('[push-activity] 1. No campaigns have been synced to Supabase yet');
+        console.warn('[push-activity] 2. All campaigns are marked as is_active = false');
+        console.warn('[push-activity] 3. There is a connection/query issue');
+      }
       
       // Enrich campaigns with unique_company_count
       console.log('[push-activity] Enriching campaigns with unique_company_count...');
