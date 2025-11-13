@@ -393,3 +393,93 @@ export async function getMatchingSummary(filterId?: string | null): Promise<Matc
   return data && data.length > 0 ? data[0] : null;
 }
 
+// ============================================================================
+// PUSHED COMPANIES
+// ============================================================================
+
+export interface PushedCompany {
+  id?: number;
+  campaign_id: string;
+  company_name: string;
+  pushed_at?: string;
+}
+
+export async function getPushedCompanies(campaignId: string): Promise<string[]> {
+  const { data, error } = await supabase
+    .from('pushed_companies')
+    .select('company_name')
+    .eq('campaign_id', campaignId);
+  
+  if (error) throw error;
+  return data?.map(row => row.company_name) || [];
+}
+
+export async function markCompaniesAsPushed(campaignId: string, companyNames: string[]): Promise<void> {
+  if (companyNames.length === 0) return;
+  
+  const records = companyNames.map(companyName => ({
+    campaign_id: campaignId,
+    company_name: companyName
+  }));
+  
+  // Use upsert - Supabase will handle duplicates based on the UNIQUE constraint
+  // For composite unique constraints, we need to specify both columns
+  const { error } = await supabase
+    .from('pushed_companies')
+    .upsert(records, { 
+      onConflict: 'campaign_id,company_name',
+      ignoreDuplicates: false 
+    });
+  
+  if (error) {
+    // If it's a unique violation, that's fine - some companies might already be marked
+    // Try inserting individually to handle partial failures
+    if (error.code === '23505' || error.message?.includes('duplicate')) {
+      // Insert individually, ignoring duplicates
+      for (const record of records) {
+        const { error: insertError } = await supabase
+          .from('pushed_companies')
+          .upsert(record, { onConflict: 'campaign_id,company_name' });
+        
+        // Ignore duplicate errors
+        if (insertError && insertError.code !== '23505') {
+          console.warn(`Failed to mark company ${record.company_name} as pushed:`, insertError);
+        }
+      }
+    } else {
+      throw error;
+    }
+  }
+}
+
+export async function getCampaignPushStatus(campaignId: string): Promise<{
+  total_companies: number;
+  new_companies: number;
+  has_new_companies: boolean;
+  has_ever_been_pushed: boolean;
+  show_push_new: boolean;
+}> {
+  // Get unique companies from leads (excluding paused leads)
+  const uniqueCompanies = await getUniqueCompaniesByCampaign(campaignId);
+  const totalCompanies = uniqueCompanies.length;
+  
+  // Get pushed companies
+  const pushedCompanies = await getPushedCompanies(campaignId);
+  const pushedCompaniesSet = new Set(pushedCompanies);
+  
+  // Check if campaign has ever been pushed
+  const has_ever_been_pushed = pushedCompanies.length > 0;
+  
+  // Get new companies (not yet pushed)
+  const newCompanies = uniqueCompanies.filter(company => !pushedCompaniesSet.has(company));
+  const newCompaniesCount = newCompanies.length;
+  
+  return {
+    total_companies: totalCompanies,
+    new_companies: newCompaniesCount,
+    has_new_companies: newCompaniesCount > 0,
+    has_ever_been_pushed,
+    show_push_new: has_ever_been_pushed && newCompaniesCount > 0
+  };
+}
+

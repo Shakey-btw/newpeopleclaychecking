@@ -199,6 +199,20 @@ CREATE TABLE IF NOT EXISTS organization_custom_fields (
 );
 
 -- ============================================================================
+-- 11. PUSHED COMPANIES (for push activity tracking)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS pushed_companies (
+    id SERIAL PRIMARY KEY,
+    campaign_id TEXT NOT NULL REFERENCES campaigns(id) ON DELETE CASCADE,
+    company_name TEXT NOT NULL,
+    pushed_at TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE(campaign_id, company_name)
+);
+
+CREATE INDEX IF NOT EXISTS idx_pushed_companies_campaign_id ON pushed_companies(campaign_id);
+CREATE INDEX IF NOT EXISTS idx_pushed_companies_company_name ON pushed_companies(company_name);
+
+-- ============================================================================
 -- ROW LEVEL SECURITY (RLS) - Enable if needed
 -- ============================================================================
 -- Uncomment these if you want to enable Row Level Security

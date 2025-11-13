@@ -34,10 +34,23 @@ export async function POST(request: NextRequest) {
         stderr += data.toString();
       });
 
-      pythonProcess.on('close', (code) => {
+      pythonProcess.on('close', async (code) => {
         if (code === 0) {
           try {
             const result = JSON.parse(stdout);
+            
+            // If push was successful, also mark companies as pushed in Supabase
+            if (result.success && result.companies && result.companies.length > 0) {
+              try {
+                const { markCompaniesAsPushed } = await import("@/lib/supabase-helpers");
+                await markCompaniesAsPushed(campaignId, result.companies);
+                console.log(`[push-activity-push] Marked ${result.companies.length} companies as pushed in Supabase`);
+              } catch (supabaseError) {
+                console.error('[push-activity-push] Failed to mark companies as pushed in Supabase:', supabaseError);
+                // Don't fail the request if Supabase update fails - Python script already succeeded
+              }
+            }
+            
             resolve(NextResponse.json({ success: true, result }));
           } catch (parseError) {
             console.error("Failed to parse Python script output:", parseError);
