@@ -65,8 +65,16 @@ export default function PushActivity() {
       const campaignsData = await campaignsResponse.json();
       const changelogData = await changelogResponse.json();
       
+      console.log('[push-activity-page] API Response:', {
+        campaignsSuccess: campaignsData.success,
+        campaignsCount: campaignsData.campaigns?.length || 0,
+        campaigns: campaignsData.campaigns,
+        error: campaignsData.error
+      });
+      
       if (campaignsData.success) {
         const newCampaigns = campaignsData.campaigns || [];
+        console.log(`[push-activity-page] Setting ${newCampaigns.length} campaigns`);
         const currentCampaignIds = new Set(campaigns.map(c => c.id));
         const newlyDiscovered = new Set<string>();
         
@@ -83,7 +91,9 @@ export default function PushActivity() {
         setNewlyDiscoveredCampaigns(newlyDiscovered);
         setLastUpdate(new Date().toISOString());
       } else {
-        console.error('Failed to fetch campaigns:', campaignsData.error);
+        console.error('[push-activity-page] Failed to fetch campaigns:', campaignsData.error);
+        // Still set empty array to show "no campaigns" message
+        setCampaigns([]);
       }
       
       if (changelogData.success) {
@@ -331,7 +341,9 @@ export default function PushActivity() {
     // Filter for "open-to-push" view
     return campaigns.filter(campaign => {
       const status = pushStatus[campaign.id];
-      if (!status) return false;
+      
+      // If status hasn't loaded yet, show the campaign (treat as never been pushed)
+      if (!status) return true;
       
       // Show campaigns that have never been pushed OR have new companies
       return !status.has_ever_been_pushed || status.has_new_companies;

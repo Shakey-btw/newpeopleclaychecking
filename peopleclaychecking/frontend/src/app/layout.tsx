@@ -29,6 +29,7 @@ export default function RootLayout({
       </head>
       <body
         className={`${libreFranklin.variable} ${geistMono.variable} antialiased`}
+        suppressHydrationWarning
       >
         {children}
       </body>
