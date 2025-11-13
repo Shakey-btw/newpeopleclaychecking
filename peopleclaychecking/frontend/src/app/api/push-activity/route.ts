@@ -55,14 +55,21 @@ export async function GET() {
       });
       
       // On Vercel/production, Python scripts are not available
-      // Return empty campaigns array instead of trying to run Python
+      // Return error details for debugging
       if (process.env.VERCEL || process.env.NODE_ENV === 'production') {
-        console.log('Running on Vercel/production - skipping Python fallback');
+        console.error('[push-activity] Running on Vercel/production - Supabase failed:', {
+          error: supabaseError instanceof Error ? supabaseError.message : String(supabaseError),
+          hasSupabaseUrl: !!process.env.NEXT_PUBLIC_SUPABASE_URL,
+          hasSupabaseKey: !!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+          supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL || 'not set'
+        });
         return NextResponse.json({ 
-          success: true, 
+          success: false, 
           campaigns: [],
           lastUpdate: new Date().toISOString(),
-          error: "Supabase connection failed - no campaigns available"
+          error: "Supabase connection failed",
+          errorDetails: supabaseError instanceof Error ? supabaseError.message : String(supabaseError),
+          environment: process.env.VERCEL ? 'vercel' : 'production'
         });
       }
       

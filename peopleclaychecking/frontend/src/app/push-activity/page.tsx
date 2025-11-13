@@ -87,6 +87,7 @@ export default function PushActivity() {
           });
         }
         
+        console.log('[push-activity-page] Setting campaigns state:', newCampaigns.length, 'campaigns');
         setCampaigns(newCampaigns);
         setNewlyDiscoveredCampaigns(newlyDiscovered);
         setLastUpdate(new Date().toISOString());
@@ -334,20 +335,36 @@ export default function PushActivity() {
   };
 
   const getFilteredCampaigns = () => {
+    console.log('[push-activity-page] getFilteredCampaigns called:', {
+      viewMode,
+      campaignsCount: campaigns.length,
+      pushStatusKeys: Object.keys(pushStatus),
+      campaigns: campaigns.map(c => ({ id: c.id, name: c.name }))
+    });
+    
     if (viewMode === 'all-campaigns') {
+      console.log('[push-activity-page] Returning all campaigns:', campaigns.length);
       return campaigns;
     }
     
     // Filter for "open-to-push" view
-    return campaigns.filter(campaign => {
+    const filtered = campaigns.filter(campaign => {
       const status = pushStatus[campaign.id];
       
       // If status hasn't loaded yet, show the campaign (treat as never been pushed)
-      if (!status) return true;
+      if (!status) {
+        console.log(`[push-activity-page] Campaign ${campaign.name} has no status, showing it`);
+        return true;
+      }
       
       // Show campaigns that have never been pushed OR have new companies
-      return !status.has_ever_been_pushed || status.has_new_companies;
+      const shouldShow = !status.has_ever_been_pushed || status.has_new_companies;
+      console.log(`[push-activity-page] Campaign ${campaign.name}: has_ever_been_pushed=${status.has_ever_been_pushed}, has_new_companies=${status.has_new_companies}, shouldShow=${shouldShow}`);
+      return shouldShow;
     });
+    
+    console.log('[push-activity-page] Filtered campaigns count:', filtered.length);
+    return filtered;
   };
 
   return (
