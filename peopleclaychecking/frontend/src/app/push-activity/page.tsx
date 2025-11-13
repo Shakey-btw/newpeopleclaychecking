@@ -281,14 +281,50 @@ export default function PushActivity() {
       const response = await fetch(`/api/push-activity/status?campaignId=${campaignId}`);
       const data = await response.json();
       
+      console.log(`[push-activity-page] Status API response for ${campaignId}:`, {
+        success: data.success,
+        result: data.result,
+        error: data.error,
+        errorDetails: data.errorDetails
+      });
+      
       if (data.success) {
         setPushStatus(prev => ({
           ...prev,
           [campaignId]: data.result
         }));
+      } else {
+        console.error(`[push-activity-page] Status API failed for ${campaignId}:`, data.error, data.errorDetails);
+        // Set a default status indicating it failed to load
+        // This prevents campaigns from showing as "open to push" when status fails
+        setPushStatus(prev => ({
+          ...prev,
+          [campaignId]: {
+            has_ever_been_pushed: false,
+            has_new_companies: false,
+            total_companies: 0,
+            new_companies: 0,
+            show_push_new: false,
+            _error: true,
+            _errorMessage: data.error || 'Failed to fetch status'
+          }
+        }));
       }
     } catch (error) {
-      console.error('Error fetching push status:', error);
+      console.error(`[push-activity-page] Error fetching push status for ${campaignId}:`, error);
+      // Set error status to prevent showing as "open to push"
+      setPushStatus(prev => ({
+        ...prev,
+        [campaignId]: {
+          has_ever_been_pushed: false,
+          has_new_companies: false,
+          total_companies: 0,
+          new_companies: 0,
+          show_push_new: false,
+          _error: true,
+          _errorMessage: error instanceof Error ? error.message : String(error)
+        }
+      }));
     }
   };
 

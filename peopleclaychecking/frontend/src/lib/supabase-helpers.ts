@@ -465,14 +465,30 @@ export async function getCampaignPushStatus(campaignId: string): Promise<{
   
   // Get pushed companies
   const pushedCompanies = await getPushedCompanies(campaignId);
-  const pushedCompaniesSet = new Set(pushedCompanies);
+  
+  // Normalize company names for comparison (trim and lowercase)
+  const normalizeCompanyName = (name: string) => name.trim().toLowerCase();
+  const normalizedPushedCompanies = pushedCompanies.map(normalizeCompanyName);
+  const pushedCompaniesSet = new Set(normalizedPushedCompanies);
   
   // Check if campaign has ever been pushed
   const has_ever_been_pushed = pushedCompanies.length > 0;
   
-  // Get new companies (not yet pushed)
-  const newCompanies = uniqueCompanies.filter(company => !pushedCompaniesSet.has(company));
+  // Get new companies (not yet pushed) - using normalized comparison
+  const newCompanies = uniqueCompanies.filter(company => {
+    const normalized = normalizeCompanyName(company);
+    return !pushedCompaniesSet.has(normalized);
+  });
   const newCompaniesCount = newCompanies.length;
+  
+  console.log(`[supabase-helpers] getCampaignPushStatus(${campaignId}):`, {
+    totalCompanies,
+    pushedCompaniesCount: pushedCompanies.length,
+    newCompaniesCount,
+    has_ever_been_pushed,
+    sampleUniqueCompanies: uniqueCompanies.slice(0, 3),
+    samplePushedCompanies: pushedCompanies.slice(0, 3)
+  });
   
   return {
     total_companies: totalCompanies,
