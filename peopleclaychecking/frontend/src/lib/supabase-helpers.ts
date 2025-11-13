@@ -153,7 +153,7 @@ export async function getCampaignStats(campaignId: string) {
   
   // Get unique companies - we need to paginate through all results
   // since Supabase has a 1000 row limit per query
-  let uniqueCompanies = new Set<string>();
+  const uniqueCompanies = new Set<string>();
   let page = 0;
   const pageSize = 1000;
   let hasMore = true;
@@ -326,6 +326,7 @@ export interface MatchingSummary {
   total_pipedrive_orgs?: number;
   total_lemlist_companies?: number;
   matching_companies?: number;
+  non_matching_pipedrive?: number;
   match_percentage?: number;
   created_at?: string;
 }

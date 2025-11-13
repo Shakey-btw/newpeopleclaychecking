@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
       }, { status: 400 });
     }
 
-    return new Promise((resolve) => {
+    return new Promise<NextResponse>((resolve) => {
       const pythonProcess = spawn('bash', ['-c', `source venv/bin/activate && python3 "${scriptPath}" --get-status --campaign-id ${campaignId}`], {
         cwd: backendDir,
         stdio: ['pipe', 'pipe', 'pipe']

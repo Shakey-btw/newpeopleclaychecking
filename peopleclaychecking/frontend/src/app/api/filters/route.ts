@@ -30,8 +30,8 @@ export async function GET() {
       // Fallback to SQLite
       const dbPath = path.join(process.cwd(), "../backend/pipedrive.db");
       
-      return new Promise((resolve) => {
-        const db = new sqlite3.Database(dbPath, (err) => {
+      return new Promise<NextResponse>((resolve) => {
+        const db = new sqlite3.Database(dbPath, (err: Error | null) => {
           if (err) {
             console.error("Error opening database:", err);
             resolve(NextResponse.json({ error: "Database connection failed" }, { status: 500 }));
@@ -93,7 +93,7 @@ export async function POST(request: NextRequest) {
     // Path to the filtered_matching.py script
     const scriptPath = path.join(process.cwd(), "../backend/filtered_matching.py");
     
-    return new Promise((resolve) => {
+    return new Promise<NextResponse>((resolve) => {
       // Execute the Python script with the filter URL using the virtual environment
       const pythonProcess = spawn('bash', ['-c', `source venv/bin/activate && python3 "${scriptPath}" "${filterUrl}"`], {
         cwd: path.join(process.cwd(), "../backend"),

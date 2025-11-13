@@ -8,7 +8,7 @@ export async function GET() {
     const scriptPath = path.join(process.cwd(), "../backend/push_activity.py");
     const backendDir = path.join(process.cwd(), "../backend");
     
-    return new Promise((resolve) => {
+    return new Promise<NextResponse>((resolve) => {
       // Execute the Python script to get overview data
       const pythonProcess = spawn('bash', ['-c', `source venv/bin/activate && python3 "${scriptPath}" --get-overview`], {
         cwd: backendDir,
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
       const scriptPath = path.join(process.cwd(), "../backend/push_activity.py");
       const backendDir = path.join(process.cwd(), "../backend");
       
-      return new Promise((resolve) => {
+      return new Promise<NextResponse>((resolve) => {
         // Execute the Python script to get company names
         const pythonProcess = spawn('bash', ['-c', `source venv/bin/activate && python3 "${scriptPath}" --get-companies`], {
           cwd: backendDir,
@@ -147,7 +147,7 @@ export async function POST(request: NextRequest) {
     const scriptPath = path.join(process.cwd(), "../backend/push_activity.py");
     const backendDir = path.join(process.cwd(), "../backend");
     
-    return new Promise((resolve) => {
+    return new Promise<NextResponse>((resolve) => {
       // Execute the Python script to sync data
       const pythonProcess = spawn('bash', ['-c', `source venv/bin/activate && python3 "${scriptPath}" --update-campaigns`], {
         cwd: backendDir,

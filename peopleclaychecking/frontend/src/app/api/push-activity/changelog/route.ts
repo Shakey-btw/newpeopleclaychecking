@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
       // Fallback to SQLite
       const dbPath = path.join(process.cwd(), "../backend/push_activity.db");
       
-      return new Promise((resolve) => {
+      return new Promise<NextResponse>((resolve) => {
         const db = new sqlite3.Database(dbPath, (err) => {
           if (err) {
             console.error("Error opening push activity database:", err);

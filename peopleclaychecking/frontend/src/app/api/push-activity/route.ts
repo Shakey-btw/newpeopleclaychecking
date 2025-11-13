@@ -20,7 +20,7 @@ export async function GET() {
       const scriptPath = path.join(process.cwd(), "../backend/push_activity.py");
       const backendDir = path.join(process.cwd(), "../backend");
       
-      return new Promise((resolve) => {
+      return new Promise<NextResponse>((resolve) => {
         // Execute the Python script to get current campaigns
         const pythonProcess = spawn('bash', ['-c', `source venv/bin/activate && python3 "${scriptPath}" --get-campaigns`], {
           cwd: backendDir,
@@ -97,7 +97,7 @@ export async function POST(request: NextRequest) {
     const scriptPath = path.join(process.cwd(), "../backend/push_activity.py");
     const backendDir = path.join(process.cwd(), "../backend");
     
-    return new Promise((resolve) => {
+    return new Promise<NextResponse>((resolve) => {
       // Execute the Python script to update campaigns
       const pythonProcess = spawn('bash', ['-c', `source venv/bin/activate && python3 "${scriptPath}" --update-campaigns`], {
         cwd: backendDir,
