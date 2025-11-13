@@ -17,55 +17,29 @@ export async function GET() {
       console.log(`[push-activity] Found ${campaigns.length} campaigns from Supabase`);
       
       // Enrich campaigns with unique_company_count
-      // Use Promise.allSettled to handle timeouts gracefully and continue with other campaigns
       console.log('[push-activity] Enriching campaigns with unique_company_count...');
-      const enrichmentPromises = campaigns.map(async (campaign) => {
-        try {
-          // Add timeout to prevent hanging on Vercel (5 seconds per campaign)
-          const timeoutPromise = new Promise<never>((_, reject) => 
-            setTimeout(() => reject(new Error('Timeout')), 5000)
-          );
-          
-          const uniqueCompanies = await Promise.race([
-            getUniqueCompaniesByCampaign(campaign.id),
-            timeoutPromise
-          ]);
-          
-          const count = uniqueCompanies.length;
-          console.log(`[push-activity] Campaign ${campaign.name} (${campaign.id}): ${count} unique companies`);
-          return {
-            ...campaign,
-            unique_company_count: count
-          };
-        } catch (error) {
-          console.error(`[push-activity] Error getting unique companies for campaign ${campaign.id}:`, error);
-          // Return with 0 count so it gets filtered out, but don't fail the entire request
-          return {
-            ...campaign,
-            unique_company_count: 0
-          };
-        }
-      });
-      
-      const enrichedCampaigns = await Promise.allSettled(enrichmentPromises);
-      
-      // Extract successful results and handle failures
-      const successfulCampaigns = enrichedCampaigns
-        .map((result, index) => {
-          if (result.status === 'fulfilled') {
-            return result.value;
-          } else {
-            console.error(`[push-activity] Campaign enrichment failed:`, result.reason);
-            // Return campaign with 0 count if enrichment failed
+      const enrichedCampaigns = await Promise.all(
+        campaigns.map(async (campaign) => {
+          try {
+            const uniqueCompanies = await getUniqueCompaniesByCampaign(campaign.id);
+            const count = uniqueCompanies.length;
+            console.log(`[push-activity] Campaign ${campaign.name} (${campaign.id}): ${count} unique companies`);
             return {
-              ...campaigns[index],
+              ...campaign,
+              unique_company_count: count
+            };
+          } catch (error) {
+            console.error(`[push-activity] Error getting unique companies for campaign ${campaign.id}:`, error);
+            return {
+              ...campaign,
               unique_company_count: 0
             };
           }
-        });
+        })
+      );
       
       // Filter out campaigns with 0 or 1 unique companies (same as Python script logic)
-      const filteredCampaigns = successfulCampaigns.filter(c => c.unique_company_count > 1);
+      const filteredCampaigns = enrichedCampaigns.filter(c => c.unique_company_count > 1);
       console.log(`[push-activity] After filtering: ${filteredCampaigns.length} campaigns with >1 unique companies`);
       
       return NextResponse.json({ 
